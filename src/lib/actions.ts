@@ -7,6 +7,7 @@ import {
   StaffRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import {
   formBoolean,
@@ -17,6 +18,7 @@ import {
 import { toCents } from "@/lib/money";
 import { calculateCommission } from "@/lib/commission";
 import { prisma } from "@/lib/db";
+import { signIn, signOut } from "@/lib/auth";
 
 async function audit(action: AuditAction, entityType: string, entityId?: string) {
   await prisma.auditLog.create({
@@ -27,6 +29,24 @@ async function audit(action: AuditAction, entityType: string, entityId?: string)
       newValue: "Admin settings updated from BarPOS web app",
     },
   });
+}
+
+export async function loginAction(formData: FormData) {
+  const ok = await signIn(
+    formString(formData, "email"),
+    formString(formData, "password"),
+  );
+
+  if (!ok) {
+    redirect("/login?error=invalid");
+  }
+
+  redirect("/");
+}
+
+export async function logoutAction() {
+  await signOut();
+  redirect("/login");
 }
 
 export async function createCategory(formData: FormData) {
