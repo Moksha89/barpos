@@ -75,8 +75,8 @@ export function PosBillingClient({
   const [payments, setPayments] = useState<PaymentLine[]>([
     { mode: PaymentMode.CASH, amount: 0 },
   ]);
-  const [orderJson, setOrderJson] = useState("");
   const keyCounter = useRef(0);
+  const orderJsonRef = useRef<HTMLInputElement>(null);
 
   const selectedStaff = staff.find((member) => member.id === staffId);
   const visibleItems = items.filter((item) => item.categoryId === selectedCategoryId);
@@ -156,7 +156,10 @@ export function PosBillingClient({
   };
 
   const prepareOrder = () => {
-    setOrderJson(
+    if (!orderJsonRef.current) {
+      return;
+    }
+    orderJsonRef.current.value =
       JSON.stringify({
         tableNumber,
         customerName,
@@ -171,8 +174,7 @@ export function PosBillingClient({
           complimentaryReason: line.complimentaryReason ?? null,
         })),
         payments,
-      }),
-    );
+      });
   };
 
   const setExactCash = () => {
@@ -407,7 +409,7 @@ export function PosBillingClient({
         </div>
 
         <form action={createPosOrder} className="mt-4" onSubmit={prepareOrder}>
-          <input name="orderJson" type="hidden" value={orderJson} />
+          <input name="orderJson" ref={orderJsonRef} type="hidden" />
           <button
             className="min-h-12 w-full rounded-2xl bg-amber-400 px-4 text-base font-black text-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={cart.length === 0 || !staffId || paid !== totalDue}
