@@ -10,6 +10,7 @@ import {
   formString,
 } from "@/lib/form";
 import { toCents } from "@/lib/money";
+import { calculateCommission } from "@/lib/commission";
 import { prisma } from "@/lib/db";
 
 async function audit(action: AuditAction, entityType: string, entityId?: string) {
@@ -219,4 +220,213 @@ export async function createExpense(formData: FormData) {
   await audit(AuditAction.EXPENSE_CREATED, "Expense", expense.id);
   revalidatePath("/expenses");
   revalidatePath("/reports");
+}
+
+type PosOrderLine = {
+  itemId: string;
+  quantity: number;
+  isComplimentary: boolean;
+  offerId?: string | null;
+  complimentaryReason?: string | null;
+};
+
+type PosPaymentLine = {
+  mode: PaymentMode;
+  amount: number;
+  reference?: string | null;
+};
+
+type PosOrderPayload = {
+  tableNumber?: string | null;
+  customerName?: string | null;
+  staffId: string;
+  discount: number;
+  tip: number;
+  items: PosOrderLine[];
+  payments: PosPaymentLine[];
+};
+
+function parsePosOrderPayload(formData: FormData): PosOrderPayload {
+  const raw = formString(formData, "orderJson");
+  const parsed = JSON.parse(raw) as PosOrderPayload;
+  return parsed;
+}
+
+async function nextBillNumber() {
+  const count = await prisma.order.count();
+  return `BILL-${String(count + 1).padStart(6, "0")}`;
+}
+
+export async function createPosOrder(formData: FormData) {
+  const payload = parsePosOrderPayload(formData);
+  const discountCents = toCents(payload.discount);
+  const tipCents = toCents(payload.tip);
+  const billNumber = await nextBillNumber();
+
+  const order = await prisma.$transaction(async (tx) => {
+    const staff = await tx.staff.findUniqueOrThrow({
+      where: { id: payload.staffId },
+    });
+    const itemIds = payload.items.map((line) => line.itemId);
+    const items = await tx.item.findMany({
+      where: { id: { in: itemIds }, active: true },
+    });
+    const itemById = new Map(items.map((item) => [item.id, item]));
+
+    const paidLines = payload.items.filter((line) => !line.isComplimentary);
+    const subtotalCents = paidLines.reduce((total, line) => {
+      const item = itemById.get(line.itemId);
+      if (!item) {
+        throw new Error("Invalid item in bill");
+      }
+      return total + Math.round(item.sellingPriceCents * line.quantity);
+    }, 0);
+    const cappedDiscountCents = Math.min(discountCents, subtotalCents);
+    const discountRatio =
+      subtotalCents > 0 ? cappedDiscountCents / subtotalCents : 0;
+
+    let inventoryCostCents = 0;
+    let complimentaryValueCents = 0;
+    let eligibleSalesCents = 0;
+    let specialDrinkSalesCents = 0;
+    let taxCents = 0;
+
+    const orderItems = payload.items.map((line) => {
+      const item = itemById.get(line.itemId);
+      if (!item) {
+        throw new Error("Invalid item in bill");
+      }
+      const amountCents = line.isComplimentary
+        ? 0
+        : Math.round(item.sellingPriceCents * line.quantity);
+      const discountedAmountCents = Math.round(amountCents * (1 - discountRatio));
+      const totalCostCents = Math.round(item.purchaseCostCents * line.quantity);
+
+      inventoryCostCents += totalCostCents;
+      taxCents += Math.round((discountedAmountCents * item.taxPercent) / 100);
+
+      if (line.isComplimentary) {
+        complimentaryValueCents += Math.round(
+          item.sellingPriceCents * line.quantity,
+        );
+      }
+
+      if (!line.isComplimentary && item.commissionEligible) {
+        eligibleSalesCents += discountedAmountCents;
+        if (item.specialCommissionEligible) {
+          specialDrinkSalesCents += discountedAmountCents;
+        }
+      }
+
+      return {
+        itemId: line.itemId,
+        offerId: line.offerId ?? null,
+        quantity: line.quantity,
+        rateCents: line.isComplimentary ? 0 : item.sellingPriceCents,
+        amountCents,
+        purchaseCostCents: item.purchaseCostCents,
+        totalCostCents,
+        isComplimentary: line.isComplimentary,
+        complimentaryReason: line.complimentaryReason ?? null,
+        commissionEligible: !line.isComplimentary && item.commissionEligible,
+        specialCommissionEligible:
+          !line.isComplimentary && item.specialCommissionEligible,
+      };
+    });
+
+    const commission = calculateCommission({
+      eligibleSalesCents,
+      specialDrinkSalesCents,
+      normalCommissionPercent: staff.normalCommissionPercent,
+      specialCommissionPercent: staff.specialCommissionPercent,
+    });
+
+    const netSalesCents = subtotalCents - cappedDiscountCents + taxCents;
+    const paymentAmountCents = payload.payments.reduce(
+      (total, payment) => total + toCents(payment.amount),
+      0,
+    );
+
+    if (paymentAmountCents !== netSalesCents + tipCents) {
+      throw new Error("Payment amount must match net sales plus tip");
+    }
+
+    const createdOrder = await tx.order.create({
+      data: {
+        billNumber,
+        tableNumber: payload.tableNumber ?? null,
+        customerName: payload.customerName ?? null,
+        staffId: payload.staffId,
+        status: "PAID",
+        subtotalCents,
+        discountCents: cappedDiscountCents,
+        taxCents,
+        netSalesCents,
+        tipCents,
+        totalCollectedCents: netSalesCents + tipCents,
+        complimentaryValueCents,
+        inventoryCostCents,
+        normalCommissionSalesCents: commission.normalEligibleSalesCents,
+        specialCommissionSalesCents: commission.specialDrinkSalesCents,
+        normalCommissionCents: commission.normalCommissionCents,
+        specialCommissionCents: commission.specialCommissionCents,
+        totalCommissionCents: commission.totalCommissionCents,
+        paidAt: new Date(),
+        items: { create: orderItems },
+        payments: {
+          create: payload.payments.map((payment) => ({
+            mode: payment.mode,
+            amountCents: toCents(payment.amount),
+            reference: payment.reference ?? null,
+          })),
+        },
+        tips:
+          tipCents > 0
+            ? {
+                create: {
+                  staffId: payload.staffId,
+                  amountCents: tipCents,
+                  paymentMode: payload.payments[0]?.mode ?? PaymentMode.CASH,
+                },
+              }
+            : undefined,
+      },
+    });
+
+    for (const line of payload.items) {
+      const item = itemById.get(line.itemId);
+      if (!item) {
+        throw new Error("Invalid inventory line");
+      }
+      const totalCostCents = Math.round(item.purchaseCostCents * line.quantity);
+      await tx.item.update({
+        where: { id: item.id },
+        data: { stockQuantity: { decrement: line.quantity } },
+      });
+      await tx.inventoryTransaction.create({
+        data: {
+          itemId: item.id,
+          orderId: createdOrder.id,
+          type: line.isComplimentary ? "COMPLIMENTARY" : "SALE",
+          quantityChange: -line.quantity,
+          unitCostCents: item.purchaseCostCents,
+          totalCostCents,
+          notes: line.isComplimentary ? "Complimentary offer item" : "POS sale",
+        },
+      });
+    }
+
+    return createdOrder;
+  });
+
+  if (discountCents > 0) {
+    await audit(AuditAction.DISCOUNT_APPLIED, "Order", order.id);
+  }
+  if (payload.items.some((line) => line.isComplimentary)) {
+    await audit(AuditAction.COMPLIMENTARY_ADDED, "Order", order.id);
+  }
+
+  revalidatePath("/pos");
+  revalidatePath("/reports");
+  revalidatePath(`/invoices/customer/${order.id}`);
 }
