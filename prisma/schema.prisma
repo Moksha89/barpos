@@ -1,0 +1,495 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum RoleName {
+  OWNER_ADMIN
+  MANAGER
+  CASHIER
+  WAITER_WAITRESS
+  ACCOUNTANT
+  KITCHEN_BAR
+}
+
+enum StaffRole {
+  WAITER
+  WAITRESS
+  CASHIER
+  MANAGER
+  ACCOUNTANT
+  KITCHEN
+  BAR
+}
+
+enum OrderStatus {
+  DRAFT
+  PAID
+  VOID
+  CANCELLED
+}
+
+enum PaymentMode {
+  CASH
+  CARD
+  UPI
+  ONLINE
+  SPLIT
+}
+
+enum LedgerEntryType {
+  OPENING_BALANCE
+  COMMISSION_EARNED
+  TIPS_EARNED
+  ADVANCE_GIVEN
+  ADVANCE_DEDUCTED
+  AMOUNT_PAID
+  PENDING_CARRY_FORWARD
+  ADJUSTMENT
+}
+
+enum InventoryTransactionType {
+  SALE
+  COMPLIMENTARY
+  PURCHASE
+  ADJUSTMENT
+  VOID_REVERSAL
+}
+
+enum SettlementStatus {
+  PARTIAL
+  PAID
+}
+
+enum AuditAction {
+  OFFER_CREATED
+  OFFER_UPDATED
+  OFFER_DELETED
+  COMMISSION_CHANGED
+  SPECIAL_COMMISSION_CHANGED
+  BILL_VOIDED
+  DISCOUNT_APPLIED
+  COMPLIMENTARY_ADDED
+  EXPENSE_CREATED
+  EXPENSE_UPDATED
+  EXPENSE_DELETED
+  ADVANCE_GIVEN
+  COMMISSION_PAID
+  SETTLEMENT_EDITED
+  INVOICE_REPRINTED
+  SETTINGS_UPDATED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  active       Boolean    @default(true)
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id])
+  staffId      String?    @unique
+  staff        Staff?     @relation(fields: [staffId], references: [id])
+  orders       Order[]    @relation("OrderCashier")
+  expenses     Expense[]  @relation("ExpenseAddedBy")
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        RoleName         @unique
+  label       String
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  label       String
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model Category {
+  id                       String      @id @default(cuid())
+  name                     String      @unique
+  type                     String
+  active                   Boolean     @default(true)
+  commissionEligible       Boolean     @default(false)
+  complimentaryEligible    Boolean     @default(false)
+  items                    Item[]
+  offerBuyRules            Offer[]     @relation("OfferBuyCategory")
+  offerFreeRules           Offer[]     @relation("OfferFreeCategory")
+  commissionRules          StaffCommissionRuleCategory[]
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+}
+
+model Item {
+  id                         String      @id @default(cuid())
+  name                       String
+  sku                        String?     @unique
+  categoryId                 String
+  category                   Category    @relation(fields: [categoryId], references: [id])
+  sellingPriceCents          Int
+  purchaseCostCents          Int
+  stockQuantity              Float       @default(0)
+  unitType                   String      @default("pcs")
+  taxPercent                 Float       @default(0)
+  commissionEligible         Boolean     @default(false)
+  specialCommissionEligible  Boolean     @default(false)
+  complimentaryEligible      Boolean     @default(false)
+  active                     Boolean     @default(true)
+  orderItems                 OrderItem[]
+  offerBuyRules              Offer[]     @relation("OfferBuyItem")
+  offerEligibleFreeItems     OfferEligibleItem[]
+  commissionRuleItems        StaffCommissionRuleItem[]
+  inventoryTransactions      InventoryTransaction[]
+  createdAt                  DateTime    @default(now())
+  updatedAt                  DateTime    @updatedAt
+
+  @@index([categoryId])
+}
+
+model Staff {
+  id                         String            @id @default(cuid())
+  name                       String
+  role                       StaffRole
+  phone                      String?
+  active                     Boolean           @default(true)
+  fixedSalaryCents           Int               @default(0)
+  normalCommissionPercent    Float             @default(0)
+  specialCommissionPercent   Float             @default(0)
+  users                      User[]
+  orders                     Order[]
+  commissionRules            StaffCommissionRule[]
+  tips                       Tip[]
+  advances                   StaffAdvance[]
+  settlements                StaffSettlement[]
+  ledgerEntries              StaffLedgerEntry[]
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+}
+
+model StaffCommissionRule {
+  id                         String                         @id @default(cuid())
+  name                       String
+  staffId                    String?
+  staff                      Staff?                         @relation(fields: [staffId], references: [id])
+  normalCommissionPercent    Float
+  specialCommissionPercent   Float
+  active                     Boolean                        @default(true)
+  categories                 StaffCommissionRuleCategory[]
+  items                      StaffCommissionRuleItem[]
+  createdAt                  DateTime                       @default(now())
+  updatedAt                  DateTime                       @updatedAt
+}
+
+model StaffCommissionRuleCategory {
+  id        String              @id @default(cuid())
+  ruleId    String
+  categoryId String
+  rule      StaffCommissionRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  category  Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, categoryId])
+}
+
+model StaffCommissionRuleItem {
+  id       String              @id @default(cuid())
+  ruleId   String
+  itemId   String
+  rule     StaffCommissionRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  item     Item                @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, itemId])
+}
+
+model Offer {
+  id                         String               @id @default(cuid())
+  name                       String
+  buyItemId                  String?
+  buyItem                    Item?                @relation("OfferBuyItem", fields: [buyItemId], references: [id])
+  buyCategoryId              String?
+  buyCategory                Category?            @relation("OfferBuyCategory", fields: [buyCategoryId], references: [id])
+  buyQuantity                Int                  @default(1)
+  freeCategoryId             String?
+  freeCategory               Category?            @relation("OfferFreeCategory", fields: [freeCategoryId], references: [id])
+  freeQuantity               Int                  @default(1)
+  startDate                  DateTime?
+  endDate                    DateTime?
+  active                     Boolean              @default(true)
+  managerApprovalRequired    Boolean              @default(false)
+  waiterCanChooseFreeItem    Boolean              @default(true)
+  eligibleFreeItems          OfferEligibleItem[]
+  orderItems                 OrderItem[]
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+}
+
+model OfferEligibleItem {
+  id      String @id @default(cuid())
+  offerId String
+  itemId  String
+  offer   Offer  @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  item    Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, itemId])
+}
+
+model Order {
+  id                       String       @id @default(cuid())
+  billNumber               String       @unique
+  tableNumber              String?
+  customerName             String?
+  staffId                  String
+  staff                    Staff        @relation(fields: [staffId], references: [id])
+  cashierId                String?
+  cashier                  User?        @relation("OrderCashier", fields: [cashierId], references: [id])
+  status                   OrderStatus  @default(DRAFT)
+  subtotalCents            Int          @default(0)
+  discountCents            Int          @default(0)
+  taxCents                 Int          @default(0)
+  netSalesCents            Int          @default(0)
+  tipCents                 Int          @default(0)
+  totalCollectedCents      Int          @default(0)
+  complimentaryValueCents  Int          @default(0)
+  inventoryCostCents       Int          @default(0)
+  normalCommissionSalesCents Int        @default(0)
+  specialCommissionSalesCents Int       @default(0)
+  normalCommissionCents    Int          @default(0)
+  specialCommissionCents   Int          @default(0)
+  totalCommissionCents     Int          @default(0)
+  paidAt                   DateTime?
+  voidReason               String?
+  items                    OrderItem[]
+  payments                 Payment[]
+  tips                     Tip[]
+  inventoryTransactions    InventoryTransaction[]
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  @@index([staffId])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id                         String   @id @default(cuid())
+  orderId                    String
+  order                      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId                     String
+  item                       Item     @relation(fields: [itemId], references: [id])
+  offerId                    String?
+  offer                      Offer?   @relation(fields: [offerId], references: [id])
+  quantity                   Float
+  rateCents                  Int
+  amountCents                Int
+  purchaseCostCents          Int
+  totalCostCents             Int
+  isComplimentary            Boolean  @default(false)
+  complimentaryReason        String?
+  commissionEligible         Boolean  @default(false)
+  specialCommissionEligible  Boolean  @default(false)
+  createdAt                  DateTime @default(now())
+}
+
+model Payment {
+  id              String      @id @default(cuid())
+  orderId         String
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  mode            PaymentMode
+  amountCents     Int
+  reference       String?
+  createdAt       DateTime    @default(now())
+}
+
+model Tip {
+  id          String      @id @default(cuid())
+  orderId     String
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  staffId     String
+  staff       Staff       @relation(fields: [staffId], references: [id])
+  amountCents Int
+  paymentMode PaymentMode
+  paidStatus  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+}
+
+model StaffAdvance {
+  id                    String      @id @default(cuid())
+  staffId               String
+  staff                 Staff       @relation(fields: [staffId], references: [id])
+  amountCents           Int
+  deductedCents         Int         @default(0)
+  paymentMode           PaymentMode
+  reason                String?
+  givenBy               String
+  deductionStatus       String      @default("OPEN")
+  settlementDeductions   StaffSettlementAdvance[]
+  ledgerEntries         StaffLedgerEntry[]
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model StaffSettlement {
+  id                            String           @id @default(cuid())
+  receiptNumber                 String           @unique
+  staffId                       String
+  staff                         Staff            @relation(fields: [staffId], references: [id])
+  startDate                     DateTime
+  endDate                       DateTime
+  normalSalesCents              Int
+  specialDrinkSalesCents        Int
+  normalCommissionPercent       Float
+  specialCommissionPercent      Float
+  normalCommissionCents         Int
+  specialCommissionCents        Int
+  totalCommissionCents          Int
+  tipsCents                     Int
+  previousPendingCents          Int              @default(0)
+  advanceBalanceCents           Int              @default(0)
+  advanceDeductedCents          Int              @default(0)
+  totalPayableCents             Int
+  amountPaidCents               Int
+  remainingPendingCents         Int
+  paymentMode                   PaymentMode
+  notes                         String?
+  paidBy                        String
+  status                        SettlementStatus
+  advances                      StaffSettlementAdvance[]
+  ledgerEntries                 StaffLedgerEntry[]
+  createdAt                     DateTime         @default(now())
+  updatedAt                     DateTime         @updatedAt
+}
+
+model StaffSettlementAdvance {
+  id             String          @id @default(cuid())
+  settlementId   String
+  advanceId      String
+  amountCents    Int
+  settlement     StaffSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  advance        StaffAdvance    @relation(fields: [advanceId], references: [id])
+}
+
+model StaffLedgerEntry {
+  id             String           @id @default(cuid())
+  staffId        String
+  staff          Staff            @relation(fields: [staffId], references: [id])
+  type           LedgerEntryType
+  creditCents    Int              @default(0)
+  debitCents     Int              @default(0)
+  balanceCents   Int
+  description    String
+  settlementId   String?
+  settlement     StaffSettlement? @relation(fields: [settlementId], references: [id])
+  advanceId      String?
+  advance        StaffAdvance?    @relation(fields: [advanceId], references: [id])
+  createdAt      DateTime         @default(now())
+
+  @@index([staffId, createdAt])
+}
+
+model ExpenseCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  active    Boolean   @default(true)
+  expenses  Expense[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Expense {
+  id                 String          @id @default(cuid())
+  categoryId         String
+  category           ExpenseCategory @relation(fields: [categoryId], references: [id])
+  amountCents        Int
+  paymentMode        PaymentMode
+  paidTo             String
+  notes              String?
+  attachmentUrl      String?
+  addedByUserId      String?
+  addedBy            User?           @relation("ExpenseAddedBy", fields: [addedByUserId], references: [id])
+  expenseDate        DateTime
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([expenseDate])
+}
+
+model InventoryTransaction {
+  id              String                   @id @default(cuid())
+  itemId          String
+  item            Item                     @relation(fields: [itemId], references: [id])
+  orderId         String?
+  order           Order?                   @relation(fields: [orderId], references: [id])
+  type            InventoryTransactionType
+  quantityChange  Float
+  unitCostCents   Int
+  totalCostCents  Int
+  notes           String?
+  createdAt       DateTime                 @default(now())
+
+  @@index([itemId, createdAt])
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  action      AuditAction
+  entityType  String
+  entityId    String?
+  oldValue    String?
+  newValue    String?
+  reason      String?
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([action, createdAt])
+}
+
+model InvoiceSetting {
+  id              String   @id @default(cuid())
+  restaurantName  String
+  address         String
+  phone           String
+  gstNumber       String?
+  thankYouMessage String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model TaxSetting {
+  id           String   @id @default(cuid())
+  name         String
+  percent      Float
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PrinterSetting {
+  id             String   @id @default(cuid())
+  invoicePrinter String?
+  receiptPrinter String?
+  paperSize      String   @default("80mm")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
