@@ -11,6 +11,8 @@ describe("summarizeOrders", () => {
         {
           id: "order-1",
           billNumber: "BILL-1",
+          businessDayId: null,
+          tableId: null,
           tableNumber: "T1",
           customerName: null,
           staffId: "staff-1",

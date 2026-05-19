@@ -32,6 +32,17 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum BusinessDayStatus {
+  OPEN
+  CLOSED
+}
+
+enum TableStatus {
+  OPEN
+  SETTLED
+  VOID
+}
+
 enum PaymentMode {
   CASH
   CARD
@@ -93,6 +104,8 @@ model User {
   role         Role       @relation(fields: [roleId], references: [id])
   staffId      String?    @unique
   staff        Staff?     @relation(fields: [staffId], references: [id])
+  openedTables BarTable[] @relation("TableOpenedBy")
+  closedTables BarTable[] @relation("TableClosedBy")
   orders       Order[]    @relation("OrderCashier")
   expenses     Expense[]  @relation("ExpenseAddedBy")
   auditLogs    AuditLog[]
@@ -180,6 +193,7 @@ model Staff {
   specialCommissionPercent   Float             @default(0)
   users                      User[]
   orders                     Order[]
+  tables                     BarTable[]
   commissionRules            StaffCommissionRule[]
   tips                       Tip[]
   advances                   StaffAdvance[]
@@ -187,6 +201,44 @@ model Staff {
   ledgerEntries              StaffLedgerEntry[]
   createdAt                  DateTime          @default(now())
   updatedAt                  DateTime          @updatedAt
+}
+
+model BusinessDay {
+  id            String            @id @default(cuid())
+  businessDate DateTime          @unique
+  status        BusinessDayStatus @default(OPEN)
+  openedAt      DateTime          @default(now())
+  closedAt      DateTime?
+  tables        BarTable[]
+  orders        Order[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model BarTable {
+  id                 String      @id @default(cuid())
+  businessDayId      String
+  businessDay        BusinessDay @relation(fields: [businessDayId], references: [id])
+  tableNumber        Int
+  tableName          String
+  customerName       String?
+  guestCount         Int?
+  staffId            String
+  staff              Staff       @relation(fields: [staffId], references: [id])
+  openedByUserId     String?
+  openedBy           User?       @relation("TableOpenedBy", fields: [openedByUserId], references: [id])
+  closedByUserId     String?
+  closedBy           User?       @relation("TableClosedBy", fields: [closedByUserId], references: [id])
+  status             TableStatus @default(OPEN)
+  openedAt           DateTime    @default(now())
+  settledAt          DateTime?
+  closedAt           DateTime?
+  orders             Order[]
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@unique([businessDayId, tableNumber])
+  @@index([status, openedAt])
 }
 
 model StaffCommissionRule {
@@ -258,6 +310,10 @@ model OfferEligibleItem {
 model Order {
   id                       String       @id @default(cuid())
   billNumber               String       @unique
+  businessDayId            String?
+  businessDay              BusinessDay? @relation(fields: [businessDayId], references: [id])
+  tableId                  String?
+  table                    BarTable?    @relation(fields: [tableId], references: [id])
   tableNumber              String?
   customerName             String?
   staffId                  String

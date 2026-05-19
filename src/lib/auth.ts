@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 
 const sessionCookieName = "barpos_user_id";
+export const SESSION_COOKIE_NAME = sessionCookieName;
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
@@ -36,7 +37,26 @@ export async function requireUser() {
   return user;
 }
 
-export async function signIn(email: string, password: string) {
+export type CurrentUser = Awaited<ReturnType<typeof requireUser>>;
+
+export function getPermissionKeys(user: CurrentUser) {
+  return user.role.permissions.map((entry) => entry.permission.key);
+}
+
+export function hasPermission(user: CurrentUser, permissionKey: string) {
+  return getPermissionKeys(user).includes(permissionKey);
+}
+
+export async function requirePermission(permissionKey: string) {
+  const user = await requireUser();
+  if (!hasPermission(user, permissionKey)) {
+    redirect("/");
+  }
+  return user;
+}
+
+export async function signIn(username: string, password: string) {
+  const email = username.includes("@") ? username : `${username}@barpos.local`;
   const user = await prisma.user.findUnique({
     where: { email },
   });

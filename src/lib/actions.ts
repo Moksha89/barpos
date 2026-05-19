@@ -2,9 +2,11 @@
 
 import {
   AuditAction,
+  BusinessDayStatus,
   LedgerEntryType,
   PaymentMode,
   StaffRole,
+  TableStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -18,7 +20,8 @@ import {
 import { toCents } from "@/lib/money";
 import { calculateCommission } from "@/lib/commission";
 import { prisma } from "@/lib/db";
-import { signIn, signOut } from "@/lib/auth";
+import { hasPermission, requirePermission, signIn, signOut } from "@/lib/auth";
+import { getOrOpenBusinessDay, nextTableNumber } from "@/lib/tables";
 
 async function audit(action: AuditAction, entityType: string, entityId?: string) {
   await prisma.auditLog.create({
@@ -33,7 +36,7 @@ async function audit(action: AuditAction, entityType: string, entityId?: string)
 
 export async function loginAction(formData: FormData) {
   const ok = await signIn(
-    formString(formData, "email"),
+    formString(formData, "username"),
     formString(formData, "password"),
   );
 
@@ -49,7 +52,63 @@ export async function logoutAction() {
   redirect("/login");
 }
 
+export async function createTable(formData: FormData) {
+  const user = await requirePermission("pos.create");
+  const businessDay = await getOrOpenBusinessDay();
+  const requestedNumber = formNumber(formData, "tableNumber");
+  const tableNumber =
+    requestedNumber > 0 ? Math.trunc(requestedNumber) : await nextTableNumber(businessDay.id);
+  const tableName = formOptionalString(formData, "tableName") || `Table ${tableNumber}`;
+  const table = await prisma.barTable.create({
+    data: {
+      businessDayId: businessDay.id,
+      tableNumber,
+      tableName,
+      customerName: formOptionalString(formData, "customerName"),
+      guestCount: formNumber(formData, "guestCount") || null,
+      staffId: formString(formData, "staffId"),
+      openedByUserId: user.id,
+      status: TableStatus.OPEN,
+    },
+  });
+  revalidatePath("/");
+  revalidatePath("/tables");
+  redirect(`/pos?tableId=${table.id}`);
+}
+
+export async function openBusinessDay() {
+  await requirePermission("pos.create");
+  await getOrOpenBusinessDay();
+  revalidatePath("/");
+  revalidatePath("/tables");
+}
+
+export async function closeBusinessDay() {
+  const user = await requirePermission("pos.create");
+  const businessDay = await getOrOpenBusinessDay();
+  await prisma.$transaction(async (tx) => {
+    await tx.barTable.updateMany({
+      where: { businessDayId: businessDay.id, status: TableStatus.OPEN },
+      data: {
+        status: TableStatus.VOID,
+        closedAt: new Date(),
+        closedByUserId: user.id,
+      },
+    });
+    await tx.businessDay.update({
+      where: { id: businessDay.id },
+      data: {
+        status: BusinessDayStatus.CLOSED,
+        closedAt: new Date(),
+      },
+    });
+  });
+  revalidatePath("/");
+  revalidatePath("/tables");
+}
+
 export async function createCategory(formData: FormData) {
+  await requirePermission("products.manage");
   const category = await prisma.category.create({
     data: {
       name: formString(formData, "name"),
@@ -64,6 +123,7 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function createItem(formData: FormData) {
+  await requirePermission("products.manage");
   const item = await prisma.item.create({
     data: {
       name: formString(formData, "name"),
@@ -88,6 +148,7 @@ export async function createItem(formData: FormData) {
 }
 
 export async function createOffer(formData: FormData) {
+  await requirePermission("offers.manage");
   const offer = await prisma.offer.create({
     data: {
       name: formString(formData, "name"),
@@ -129,6 +190,7 @@ export async function createOffer(formData: FormData) {
 }
 
 export async function createStaff(formData: FormData) {
+  await requirePermission("staff.manage");
   const staff = await prisma.staff.create({
     data: {
       name: formString(formData, "name"),
@@ -148,6 +210,7 @@ export async function createStaff(formData: FormData) {
 }
 
 export async function createCommissionRule(formData: FormData) {
+  await requirePermission("commission.manage");
   const rule = await prisma.staffCommissionRule.create({
     data: {
       name: formString(formData, "name"),
@@ -185,6 +248,7 @@ export async function createCommissionRule(formData: FormData) {
 }
 
 export async function createExpenseCategory(formData: FormData) {
+  await requirePermission("settings.manage");
   const category = await prisma.expenseCategory.create({
     data: {
       name: formString(formData, "name"),
@@ -196,6 +260,7 @@ export async function createExpenseCategory(formData: FormData) {
 }
 
 export async function updateInvoiceSettings(formData: FormData) {
+  await requirePermission("settings.manage");
   const id = formOptionalString(formData, "id");
   const data = {
     restaurantName: formString(formData, "restaurantName"),
@@ -214,6 +279,7 @@ export async function updateInvoiceSettings(formData: FormData) {
 }
 
 export async function updatePrinterSettings(formData: FormData) {
+  await requirePermission("settings.manage");
   const id = formOptionalString(formData, "id");
   const data = {
     invoicePrinter: formOptionalString(formData, "invoicePrinter"),
@@ -230,6 +296,7 @@ export async function updatePrinterSettings(formData: FormData) {
 }
 
 export async function createExpense(formData: FormData) {
+  await requirePermission("expenses.manage");
   const expense = await prisma.expense.create({
     data: {
       categoryId: formString(formData, "categoryId"),
@@ -262,6 +329,7 @@ type PosPaymentLine = {
 };
 
 type PosOrderPayload = {
+  tableId?: string | null;
   tableNumber?: string | null;
   customerName?: string | null;
   staffId: string;
@@ -283,14 +351,50 @@ async function nextBillNumber() {
 }
 
 export async function createPosOrder(formData: FormData) {
+  const user = await requirePermission("pos.create");
   const payload = parsePosOrderPayload(formData);
+  if (!hasPermission(user, "pos.discount") && Number(payload.discount) > 0) {
+    throw new Error("Discount permission required");
+  }
   const discountCents = toCents(payload.discount);
   const tipCents = toCents(payload.tip);
   const billNumber = await nextBillNumber();
 
   const order = await prisma.$transaction(async (tx) => {
+    let table: {
+      id: string;
+      businessDayId: string;
+      tableName: string;
+      customerName: string | null;
+      staffId: string;
+      status: TableStatus;
+    } | null = null;
+    let businessDayId: string | null = null;
+    let tableNumber = payload.tableNumber ?? null;
+    let customerName = payload.customerName ?? null;
+
+    if (payload.tableId) {
+      table = await tx.barTable.findUnique({
+        where: { id: payload.tableId },
+        select: {
+          id: true,
+          businessDayId: true,
+          tableName: true,
+          customerName: true,
+          staffId: true,
+          status: true,
+        },
+      });
+      if (!table || table.status !== TableStatus.OPEN) {
+        throw new Error("Selected table is not open");
+      }
+      businessDayId = table.businessDayId;
+      tableNumber = table.tableName;
+      customerName = table.customerName;
+    }
+
     const staff = await tx.staff.findUniqueOrThrow({
-      where: { id: payload.staffId },
+      where: { id: table?.staffId ?? payload.staffId },
     });
     const itemIds = payload.items.map((line) => line.itemId);
     const items = await tx.item.findMany({
@@ -379,9 +483,12 @@ export async function createPosOrder(formData: FormData) {
     const createdOrder = await tx.order.create({
       data: {
         billNumber,
-        tableNumber: payload.tableNumber ?? null,
-        customerName: payload.customerName ?? null,
-        staffId: payload.staffId,
+        businessDayId,
+        tableId: table?.id ?? null,
+        tableNumber,
+        customerName,
+        staffId: table?.staffId ?? payload.staffId,
+        cashierId: user.id,
         status: "PAID",
         subtotalCents,
         discountCents: cappedDiscountCents,
@@ -409,7 +516,7 @@ export async function createPosOrder(formData: FormData) {
           tipCents > 0
             ? {
                 create: {
-                  staffId: payload.staffId,
+                  staffId: table?.staffId ?? payload.staffId,
                   amountCents: tipCents,
                   paymentMode: payload.payments[0]?.mode ?? PaymentMode.CASH,
                 },
@@ -417,6 +524,18 @@ export async function createPosOrder(formData: FormData) {
             : undefined,
       },
     });
+
+    if (table) {
+      await tx.barTable.update({
+        where: { id: table.id },
+        data: {
+          status: TableStatus.SETTLED,
+          settledAt: new Date(),
+          closedAt: new Date(),
+          closedByUserId: user.id,
+        },
+      });
+    }
 
     for (const line of payload.items) {
       const item = itemById.get(line.itemId);
@@ -466,6 +585,7 @@ async function getStaffLedgerBalance(staffId: string) {
 }
 
 export async function createStaffAdvance(formData: FormData) {
+  await requirePermission("settlements.manage");
   const staffId = formString(formData, "staffId");
   const amountCents = toCents(formNumber(formData, "amount"));
   const previousBalanceCents = await getStaffLedgerBalance(staffId);
@@ -494,6 +614,7 @@ export async function createStaffAdvance(formData: FormData) {
 }
 
 export async function createStaffSettlement(formData: FormData) {
+  await requirePermission("settlements.manage");
   const staffId = formString(formData, "staffId");
   const startDate = new Date(formString(formData, "startDate"));
   const endDate = new Date(formString(formData, "endDate"));

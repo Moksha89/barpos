@@ -12,6 +12,7 @@ const prisma = new PrismaClient({ adapter });
 const permissions = [
   ["dashboard.view", "View dashboard"],
   ["pos.create", "Create bills"],
+  ["tables.manage", "Manage active tables"],
   ["pos.discount", "Apply discounts"],
   ["pos.void", "Void bills"],
   ["offers.manage", "Manage offers"],
@@ -57,8 +58,8 @@ async function main() {
     },
     {
       name: "CASHIER" as const,
-      label: "Cashier",
-      permissionKeys: ["dashboard.view", "pos.create", "reports.view"],
+      label: "Billman / Cashier",
+      permissionKeys: ["dashboard.view", "pos.create", "tables.manage"],
     },
     {
       name: "WAITER_WAITRESS" as const,
@@ -166,8 +167,8 @@ async function main() {
       name: "Kingfisher Beer Bucket",
       sku: "BEER-BUCKET-KF",
       categoryName: "Beer",
-      sellingPrice: 1200,
-      purchaseCost: 700,
+      sellingPrice: 120,
+      purchaseCost: 70,
       stockQuantity: 60,
       commissionEligible: true,
     },
@@ -175,8 +176,8 @@ async function main() {
       name: "Premium Half Bottle",
       sku: "HALF-PREMIUM",
       categoryName: "Half Bottle",
-      sellingPrice: 2400,
-      purchaseCost: 1450,
+      sellingPrice: 240,
+      purchaseCost: 145,
       stockQuantity: 35,
       commissionEligible: true,
     },
@@ -184,8 +185,8 @@ async function main() {
       name: "Whisky Full Bottle",
       sku: "FULL-WHISKY",
       categoryName: "Full Bottle",
-      sellingPrice: 4500,
-      purchaseCost: 2800,
+      sellingPrice: 450,
+      purchaseCost: 280,
       stockQuantity: 25,
       commissionEligible: true,
     },
@@ -193,8 +194,8 @@ async function main() {
       name: "Gold Cocktail",
       sku: "COCKTAIL-GOLD",
       categoryName: "Cocktails",
-      sellingPrice: 900,
-      purchaseCost: 350,
+      sellingPrice: 90,
+      purchaseCost: 35,
       stockQuantity: 90,
       commissionEligible: true,
     },
@@ -202,8 +203,8 @@ async function main() {
       name: "VIP Special Drink",
       sku: "SPECIAL-VIP",
       categoryName: "Special Commission Drinks",
-      sellingPrice: 2000,
-      purchaseCost: 900,
+      sellingPrice: 200,
+      purchaseCost: 90,
       stockQuantity: 30,
       commissionEligible: true,
       specialCommissionEligible: true,
@@ -212,8 +213,8 @@ async function main() {
       name: "Chicken Pakoda",
       sku: "STARTER-CHICKEN-PAKODA",
       categoryName: "Starters",
-      sellingPrice: 350,
-      purchaseCost: 120,
+      sellingPrice: 35,
+      purchaseCost: 12,
       stockQuantity: 120,
       complimentaryEligible: true,
     },
@@ -221,8 +222,8 @@ async function main() {
       name: "Chicken 65",
       sku: "STARTER-CHICKEN-65",
       categoryName: "Starters",
-      sellingPrice: 420,
-      purchaseCost: 160,
+      sellingPrice: 42,
+      purchaseCost: 16,
       stockQuantity: 100,
       complimentaryEligible: true,
     },
@@ -230,8 +231,8 @@ async function main() {
       name: "Paneer Tikka",
       sku: "STARTER-PANEER-TIKKA",
       categoryName: "Starters",
-      sellingPrice: 380,
-      purchaseCost: 140,
+      sellingPrice: 38,
+      purchaseCost: 14,
       stockQuantity: 100,
       complimentaryEligible: true,
     },
@@ -239,8 +240,8 @@ async function main() {
       name: "Veg Biryani",
       sku: "MAIN-VEG-BIRYANI",
       categoryName: "Main Course",
-      sellingPrice: 500,
-      purchaseCost: 220,
+      sellingPrice: 50,
+      purchaseCost: 22,
       stockQuantity: 80,
     },
   ];
@@ -282,7 +283,7 @@ async function main() {
       name: "Priya",
       role: "WAITRESS" as const,
       phone: "9000000001",
-      fixedSalary: 20000,
+      fixedSalary: 2000,
       normalCommissionPercent: 25,
       specialCommissionPercent: 50,
     },
@@ -298,7 +299,7 @@ async function main() {
       name: "Rahul",
       role: "WAITER" as const,
       phone: "9000000003",
-      fixedSalary: 18000,
+      fixedSalary: 1800,
       normalCommissionPercent: 10,
       specialCommissionPercent: 25,
     },
@@ -338,12 +339,32 @@ async function main() {
       name: "BarPOS Admin",
       roleId: adminRole.id,
       active: true,
+      passwordHash: await hash("admin123", 12),
     },
     create: {
       name: "BarPOS Admin",
       email: "admin@barpos.local",
-      passwordHash: await hash("Admin@12345", 12),
+      passwordHash: await hash("admin123", 12),
       roleId: adminRole.id,
+    },
+  });
+
+  const cashierRole = await prisma.role.findUniqueOrThrow({
+    where: { name: "CASHIER" },
+  });
+  await prisma.user.upsert({
+    where: { email: "billman@barpos.local" },
+    update: {
+      name: "Demo Billman",
+      roleId: cashierRole.id,
+      active: true,
+      passwordHash: await hash("billman123", 12),
+    },
+    create: {
+      name: "Demo Billman",
+      email: "billman@barpos.local",
+      passwordHash: await hash("billman123", 12),
+      roleId: cashierRole.id,
     },
   });
 
@@ -435,9 +456,9 @@ async function main() {
     await prisma.invoiceSetting.create({
       data: {
         restaurantName: "BarPOS Restaurant & Lounge",
-        address: "Main Road, City",
-        phone: "+91 90000 00000",
-        gstNumber: "GSTIN-DEMO",
+        address: "Dubai, UAE",
+        phone: "+971 50 000 0000",
+        gstNumber: "TRN-DEMO",
         thankYouMessage: "Thank you. Visit again!",
       },
     });
@@ -455,12 +476,12 @@ async function main() {
   }
 
   const taxSetting = await prisma.taxSetting.findFirst({
-    where: { name: "GST" },
+    where: { name: "VAT" },
   });
   if (!taxSetting) {
     await prisma.taxSetting.create({
       data: {
-        name: "GST",
+        name: "VAT",
         percent: 0,
         active: true,
       },

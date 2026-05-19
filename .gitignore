@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/evidence/
+/qa-*.png
+/test-plan.md
 
 # next.js
 /.next/

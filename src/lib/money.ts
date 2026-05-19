@@ -7,9 +7,9 @@ export function fromCents(cents: number): number {
 }
 
 export function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-AE", {
     style: "currency",
-    currency: "INR",
+    currency: "AED",
     maximumFractionDigits: 0,
   }).format(fromCents(cents));
 }

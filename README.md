@@ -4,9 +4,13 @@ Responsive bar and restaurant POS built with Next.js App Router, TypeScript, Tai
 
 ## Features
 
+- Secure login with Admin and Billman/Cashier demo roles
+- Role-based responsive dashboard, sidebar, mobile drawer, and protected routes
+- Table-based POS flow with daily table numbering, active tables, and day closing
 - POS billing with table/customer/staff selection
 - Configurable products, categories, offers, complimentary starters, staff, commission rules, expenses, invoice settings, printer settings, roles, and permissions
-- Complimentary items are shown at ₹0, reduce stock, and add inventory cost
+- AED currency for Dubai operations
+- Complimentary items are shown at AED 0, reduce stock, and add inventory cost
 - Split payments with cash/card/UPI/online modes
 - Tips belong 100% to waitress and are excluded from restaurant revenue/commission
 - Protected commission formula:
@@ -20,11 +24,14 @@ Responsive bar and restaurant POS built with Next.js App Router, TypeScript, Tai
 
 ## Demo Login
 
-Seeded admin:
+Seeded users:
 
 ```text
-Email: admin@barpos.local
-Password: Admin@12345
+Admin username: admin
+Admin password: admin123
+
+Billman username: billman
+Billman password: billman123
 ```
 
 ## Getting Started

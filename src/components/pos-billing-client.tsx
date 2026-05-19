@@ -59,17 +59,24 @@ export function PosBillingClient({
   items,
   staff,
   offers,
+  table,
 }: {
   categories: PosCategory[];
   items: PosItem[];
   staff: PosStaff[];
   offers: PosOffer[];
+  table?: {
+    id: string;
+    tableName: string;
+    customerName: string | null;
+    staffId: string;
+  } | null;
 }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(categories[0]?.id);
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [staffId, setStaffId] = useState(staff[0]?.id ?? "");
-  const [tableNumber, setTableNumber] = useState("");
-  const [customerName, setCustomerName] = useState("");
+  const [staffId, setStaffId] = useState(table?.staffId ?? staff[0]?.id ?? "");
+  const [tableNumber, setTableNumber] = useState(table?.tableName ?? "");
+  const [customerName, setCustomerName] = useState(table?.customerName ?? "");
   const [discount, setDiscount] = useState(0);
   const [tip, setTip] = useState(0);
   const [payments, setPayments] = useState<PaymentLine[]>([
@@ -161,6 +168,7 @@ export function PosBillingClient({
     }
     orderJsonRef.current.value =
       JSON.stringify({
+        tableId: table?.id ?? null,
         tableNumber,
         customerName,
         staffId,
@@ -182,31 +190,34 @@ export function PosBillingClient({
   };
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[1fr_440px]">
+    <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_440px]">
       <section className="rounded-3xl bg-white p-5 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="grid gap-1 text-sm font-bold">
             Table / Customer
             <input
-              className="min-h-11 rounded-xl border border-stone-200 px-3"
+              className="min-h-11 rounded-xl border border-stone-200 px-3 disabled:bg-stone-100"
               onChange={(event) => setTableNumber(event.target.value)}
               placeholder="T-12"
+              readOnly={Boolean(table)}
               value={tableNumber}
             />
           </label>
           <label className="grid gap-1 text-sm font-bold">
             Customer name
             <input
-              className="min-h-11 rounded-xl border border-stone-200 px-3"
+              className="min-h-11 rounded-xl border border-stone-200 px-3 disabled:bg-stone-100"
               onChange={(event) => setCustomerName(event.target.value)}
               placeholder="Walk-in"
+              readOnly={Boolean(table)}
               value={customerName}
             />
           </label>
           <label className="grid gap-1 text-sm font-bold">
             Waitress / Staff
             <select
-              className="min-h-11 rounded-xl border border-stone-200 px-3"
+              className="min-h-11 rounded-xl border border-stone-200 px-3 disabled:bg-stone-100"
+              disabled={Boolean(table)}
               onChange={(event) => setStaffId(event.target.value)}
               value={staffId}
             >
@@ -277,7 +288,7 @@ export function PosBillingClient({
                         onClick={() => addComplimentary(offer, item)}
                         type="button"
                       >
-                        Add {item.name} ₹0
+                        Add {item.name} AED 0
                       </button>
                     ))}
                   </div>
@@ -288,7 +299,7 @@ export function PosBillingClient({
         </div>
       </section>
 
-      <aside className="rounded-3xl bg-stone-950 p-5 text-white shadow-sm">
+      <aside className="rounded-3xl bg-stone-950 p-4 text-white shadow-sm sm:p-5">
         <h2 className="text-2xl font-black">Current bill</h2>
         <p className="mt-1 text-sm text-stone-400">
           Staff: {selectedStaff?.name ?? "Select staff"}
@@ -303,7 +314,7 @@ export function PosBillingClient({
                   <p className="text-xs text-stone-400">
                     Qty {line.quantity} ·{" "}
                     {line.isComplimentary
-                      ? "₹0 Complimentary"
+                      ? "AED 0 Complimentary"
                       : formatCurrency(line.item.sellingPriceCents)}
                   </p>
                 </div>
@@ -343,12 +354,12 @@ export function PosBillingClient({
         </div>
 
         <div className="mt-4 rounded-2xl bg-white/10 p-4 text-sm">
-          <div className="flex justify-between"><span>Subtotal</span><b>₹{subtotal.toFixed(0)}</b></div>
-          <div className="flex justify-between"><span>Discount</span><b>₹{discount.toFixed(0)}</b></div>
-          <div className="flex justify-between"><span>Restaurant sale</span><b>₹{netSales.toFixed(0)}</b></div>
-          <div className="flex justify-between text-amber-200"><span>Waitress tip</span><b>₹{tip.toFixed(0)}</b></div>
+          <div className="flex justify-between"><span>Subtotal</span><b>AED {subtotal.toFixed(0)}</b></div>
+          <div className="flex justify-between"><span>Discount</span><b>AED {discount.toFixed(0)}</b></div>
+          <div className="flex justify-between"><span>Restaurant sale</span><b>AED {netSales.toFixed(0)}</b></div>
+          <div className="flex justify-between text-amber-200"><span>Waitress tip</span><b>AED {tip.toFixed(0)}</b></div>
           <div className="mt-2 flex justify-between border-t border-white/10 pt-2 text-lg">
-            <span>Total collected</span><b>₹{totalDue.toFixed(0)}</b>
+            <span>Total collected</span><b>AED {totalDue.toFixed(0)}</b>
           </div>
         </div>
 
@@ -404,7 +415,7 @@ export function PosBillingClient({
             </button>
           </div>
           <p className={paid === totalDue ? "text-xs text-green-300" : "text-xs text-red-300"}>
-            Paid ₹{paid.toFixed(0)} / Due ₹{totalDue.toFixed(0)}
+            Paid AED {paid.toFixed(0)} / Due AED {totalDue.toFixed(0)}
           </p>
         </div>
 
