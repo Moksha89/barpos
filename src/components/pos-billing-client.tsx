@@ -1,7 +1,7 @@
 "use client";
 
 import { PaymentMode } from "@prisma/client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { createPosOrder } from "@/lib/actions";
 import { formatCurrency, fromCents } from "@/lib/money";
@@ -76,9 +76,15 @@ export function PosBillingClient({
     { mode: PaymentMode.CASH, amount: 0 },
   ]);
   const [orderJson, setOrderJson] = useState("");
+  const keyCounter = useRef(0);
 
   const selectedStaff = staff.find((member) => member.id === staffId);
   const visibleItems = items.filter((item) => item.categoryId === selectedCategoryId);
+
+  const nextCartKey = () => {
+    keyCounter.current += 1;
+    return `cart-${keyCounter.current}`;
+  };
 
   const subtotal = cart.reduce(
     (total, line) =>
@@ -122,7 +128,7 @@ export function PosBillingClient({
       return [
         ...current,
         {
-          key: crypto.randomUUID(),
+          key: nextCartKey(),
           item,
           quantity: 1,
           isComplimentary: false,
@@ -135,7 +141,7 @@ export function PosBillingClient({
     setCart((current) => [
       ...current,
       {
-        key: crypto.randomUUID(),
+        key: nextCartKey(),
         item,
         quantity: 1,
         isComplimentary: true,
