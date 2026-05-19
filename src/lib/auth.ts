@@ -7,6 +7,14 @@ import { prisma } from "@/lib/db";
 const sessionCookieName = "barpos_user_id";
 export const SESSION_COOKIE_NAME = sessionCookieName;
 
+function shouldSetSecureSessionCookie() {
+  if (process.env.BARPOS_SECURE_COOKIES) {
+    return process.env.BARPOS_SECURE_COOKIES === "true";
+  }
+
+  return process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://") ?? false;
+}
+
 export async function getCurrentUser() {
   const cookieStore = await cookies();
   const userId = cookieStore.get(sessionCookieName)?.value;
@@ -74,7 +82,7 @@ export async function signIn(username: string, password: string) {
   cookieStore.set(sessionCookieName, user.id, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldSetSecureSessionCookie(),
     path: "/",
     maxAge: 60 * 60 * 12,
   });
