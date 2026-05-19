@@ -1,6 +1,11 @@
 "use server";
 
-import { AuditAction, PaymentMode, StaffRole } from "@prisma/client";
+import {
+  AuditAction,
+  LedgerEntryType,
+  PaymentMode,
+  StaffRole,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import {
@@ -429,4 +434,203 @@ export async function createPosOrder(formData: FormData) {
   revalidatePath("/pos");
   revalidatePath("/reports");
   revalidatePath(`/invoices/customer/${order.id}`);
+}
+
+async function getStaffLedgerBalance(staffId: string) {
+  const lastEntry = await prisma.staffLedgerEntry.findFirst({
+    where: { staffId },
+    orderBy: { createdAt: "desc" },
+  });
+  return lastEntry?.balanceCents ?? 0;
+}
+
+export async function createStaffAdvance(formData: FormData) {
+  const staffId = formString(formData, "staffId");
+  const amountCents = toCents(formNumber(formData, "amount"));
+  const previousBalanceCents = await getStaffLedgerBalance(staffId);
+
+  const advance = await prisma.staffAdvance.create({
+    data: {
+      staffId,
+      amountCents,
+      paymentMode: formString(formData, "paymentMode") as PaymentMode,
+      reason: formOptionalString(formData, "reason"),
+      givenBy: formString(formData, "givenBy"),
+      ledgerEntries: {
+        create: {
+          staffId,
+          type: LedgerEntryType.ADVANCE_GIVEN,
+          debitCents: amountCents,
+          balanceCents: previousBalanceCents - amountCents,
+          description: "Advance given to staff",
+        },
+      },
+    },
+  });
+
+  await audit(AuditAction.ADVANCE_GIVEN, "StaffAdvance", advance.id);
+  revalidatePath("/settlements");
+}
+
+export async function createStaffSettlement(formData: FormData) {
+  const staffId = formString(formData, "staffId");
+  const startDate = new Date(formString(formData, "startDate"));
+  const endDate = new Date(formString(formData, "endDate"));
+  endDate.setHours(23, 59, 59, 999);
+  const advanceDeductedCents = toCents(formNumber(formData, "advanceDeducted"));
+  const amountPaidCents = toCents(formNumber(formData, "amountPaid"));
+  const previousPendingCents = await getStaffLedgerBalance(staffId);
+
+  const [staff, orders, openAdvances] = await Promise.all([
+    prisma.staff.findUniqueOrThrow({ where: { id: staffId } }),
+    prisma.order.findMany({
+      where: {
+        staffId,
+        status: "PAID",
+        paidAt: { gte: startDate, lte: endDate },
+      },
+    }),
+    prisma.staffAdvance.findMany({
+      where: { staffId, deductionStatus: { not: "DEDUCTED" } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const normalSalesCents = orders.reduce(
+    (total, order) => total + order.normalCommissionSalesCents,
+    0,
+  );
+  const specialDrinkSalesCents = orders.reduce(
+    (total, order) => total + order.specialCommissionSalesCents,
+    0,
+  );
+  const normalCommissionCents = orders.reduce(
+    (total, order) => total + order.normalCommissionCents,
+    0,
+  );
+  const specialCommissionCents = orders.reduce(
+    (total, order) => total + order.specialCommissionCents,
+    0,
+  );
+  const totalCommissionCents = normalCommissionCents + specialCommissionCents;
+  const tipsCents = orders.reduce((total, order) => total + order.tipCents, 0);
+  const advanceBalanceCents = openAdvances.reduce(
+    (total, advance) => total + advance.amountCents - advance.deductedCents,
+    0,
+  );
+  const cappedAdvanceDeductionCents = Math.min(
+    advanceDeductedCents,
+    advanceBalanceCents,
+  );
+  const totalPayableCents =
+    previousPendingCents +
+    totalCommissionCents +
+    tipsCents -
+    cappedAdvanceDeductionCents;
+  const remainingPendingCents = totalPayableCents - amountPaidCents;
+  const receiptNumber = `SET-${Date.now()}`;
+
+  const settlement = await prisma.$transaction(async (tx) => {
+    const createdSettlement = await tx.staffSettlement.create({
+      data: {
+        receiptNumber,
+        staffId,
+        startDate,
+        endDate,
+        normalSalesCents,
+        specialDrinkSalesCents,
+        normalCommissionPercent: staff.normalCommissionPercent,
+        specialCommissionPercent: staff.specialCommissionPercent,
+        normalCommissionCents,
+        specialCommissionCents,
+        totalCommissionCents,
+        tipsCents,
+        previousPendingCents,
+        advanceBalanceCents,
+        advanceDeductedCents: cappedAdvanceDeductionCents,
+        totalPayableCents,
+        amountPaidCents,
+        remainingPendingCents,
+        paymentMode: formString(formData, "paymentMode") as PaymentMode,
+        notes: formOptionalString(formData, "notes"),
+        paidBy: formString(formData, "paidBy"),
+        status: remainingPendingCents > 0 ? "PARTIAL" : "PAID",
+      },
+    });
+
+    let runningBalance = previousPendingCents;
+    const ledgerEntries = [
+      {
+        type: LedgerEntryType.COMMISSION_EARNED,
+        creditCents: totalCommissionCents,
+        debitCents: 0,
+        description: "Commission earned for settlement period",
+      },
+      {
+        type: LedgerEntryType.TIPS_EARNED,
+        creditCents: tipsCents,
+        debitCents: 0,
+        description: "Tips earned for settlement period",
+      },
+      {
+        type: LedgerEntryType.ADVANCE_DEDUCTED,
+        creditCents: 0,
+        debitCents: cappedAdvanceDeductionCents,
+        description: "Advance deducted during settlement",
+      },
+      {
+        type: LedgerEntryType.AMOUNT_PAID,
+        creditCents: 0,
+        debitCents: amountPaidCents,
+        description: "Settlement amount paid",
+      },
+    ];
+
+    for (const entry of ledgerEntries) {
+      runningBalance += entry.creditCents - entry.debitCents;
+      await tx.staffLedgerEntry.create({
+        data: {
+          staffId,
+          settlementId: createdSettlement.id,
+          type: entry.type,
+          creditCents: entry.creditCents,
+          debitCents: entry.debitCents,
+          balanceCents: runningBalance,
+          description: entry.description,
+        },
+      });
+    }
+
+    let remainingDeduction = cappedAdvanceDeductionCents;
+    for (const advance of openAdvances) {
+      if (remainingDeduction <= 0) {
+        break;
+      }
+      const balance = advance.amountCents - advance.deductedCents;
+      const deduction = Math.min(balance, remainingDeduction);
+      const newDeducted = advance.deductedCents + deduction;
+      await tx.staffSettlementAdvance.create({
+        data: {
+          settlementId: createdSettlement.id,
+          advanceId: advance.id,
+          amountCents: deduction,
+        },
+      });
+      await tx.staffAdvance.update({
+        where: { id: advance.id },
+        data: {
+          deductedCents: newDeducted,
+          deductionStatus:
+            newDeducted >= advance.amountCents ? "DEDUCTED" : "PARTIAL",
+        },
+      });
+      remainingDeduction -= deduction;
+    }
+
+    return createdSettlement;
+  });
+
+  await audit(AuditAction.COMMISSION_PAID, "StaffSettlement", settlement.id);
+  revalidatePath("/settlements");
+  revalidatePath(`/invoices/settlement/${settlement.id}`);
 }
