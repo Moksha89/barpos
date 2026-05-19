@@ -12,6 +12,8 @@ import { createStaffAdvance, createStaffSettlement } from "@/lib/actions";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/money";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettlementsPage() {
   const [staff, advances, settlements, ledgerEntries] = await Promise.all([
     prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" } }),

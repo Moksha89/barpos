@@ -12,6 +12,8 @@ import {
 } from "@/lib/actions";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const [invoiceSetting, printerSetting, expenseCategories, roles] =
     await Promise.all([

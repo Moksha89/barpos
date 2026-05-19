@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/money";
 import { summarizeOrders } from "@/lib/reports";
 
+export const dynamic = "force-dynamic";
+
 export default async function ReportsPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

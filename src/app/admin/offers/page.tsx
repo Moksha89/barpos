@@ -9,6 +9,8 @@ import {
 import { createOffer } from "@/lib/actions";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function OffersPage() {
   const [offers, categories, items] = await Promise.all([
     prisma.offer.findMany({

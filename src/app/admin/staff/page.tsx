@@ -12,6 +12,8 @@ import { createStaff } from "@/lib/actions";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/money";
 
+export const dynamic = "force-dynamic";
+
 export default async function StaffPage() {
   const staff = await prisma.staff.findMany({ orderBy: { createdAt: "desc" } });
 

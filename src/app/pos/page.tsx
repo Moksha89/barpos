@@ -1,6 +1,8 @@
 import { PosBillingClient } from "@/components/pos-billing-client";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function PosPage() {
   const [categories, items, staff, offers] = await Promise.all([
     prisma.category.findMany({
