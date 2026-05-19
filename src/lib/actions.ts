@@ -454,6 +454,7 @@ export async function createPosOrder(formData: FormData) {
   revalidatePath("/pos");
   revalidatePath("/reports");
   revalidatePath(`/invoices/customer/${order.id}`);
+  redirect(`/invoices/customer/${order.id}`);
 }
 
 async function getStaffLedgerBalance(staffId: string) {
