@@ -7,6 +7,7 @@ import {
   SubmitButton,
   TextInput,
 } from "@/components/form-controls";
+import { StatCard, TableShell } from "@/components/ui";
 import { createCommissionRule } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { dateRangeFromSearchParams } from "@/lib/date-range";
@@ -60,44 +61,37 @@ export default async function CommissionPage({
   const totalCommissionCents = commissionRows.reduce((total, row) => total + row.commission, 0);
 
   return (
-    <div className="p-2.5 text-stone-950 sm:p-4">
-      <div className="mx-auto grid max-w-7xl gap-3">
-        <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
+        <header className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">Admin</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">Admin</p>
             <h1 className="mt-1 text-lg font-black sm:text-2xl">Commission Rules</h1>
             <p className="mt-1 text-sm text-stone-600">Configure rates and filter earned commission by date.</p>
           </div>
           <DateRangeFilter startDate={range.startDate} endDate={range.endDate} />
         </header>
 
-        <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-xl bg-white p-3 shadow-sm">
-            <p className="text-xs font-semibold text-stone-500">Total commission</p>
-            <p className="mt-1 text-lg font-black">{formatCurrency(totalCommissionCents)}</p>
-          </article>
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Total commission" value={formatCurrency(totalCommissionCents)} />
           {commissionRows.slice(0, 3).map((row, index) => (
-            <article className="rounded-xl bg-white p-3 shadow-sm" key={row.name}>
-              <p className="text-xs font-semibold text-stone-500">#{index + 1} {row.name}</p>
-              <p className="mt-1 text-lg font-black">{formatCurrency(row.commission)}</p>
-              <p className="text-xs text-stone-500">Sales {formatCurrency(row.sales)}</p>
-            </article>
+            <StatCard key={row.name} label={`#${index + 1} ${row.name}`} value={formatCurrency(row.commission)} helper={`Sales ${formatCurrency(row.sales)}`} accent="gold" />
           ))}
         </section>
 
         <AdminCard title="Filtered Commission" eyebrow={`${commissionRows.length} staff`}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
-                <tr><th className="px-2 py-2">Waitress</th><th className="px-2 py-2">Bills</th><th className="px-2 py-2">Sales</th><th className="px-2 py-2">Commission</th></tr>
+          <TableShell>
+            <table className="premium-table min-w-[520px] text-left">
+              <thead>
+                <tr><th>Waitress</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th></tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody>
                 {commissionRows.map((row) => (
-                  <tr key={row.name}><td className="px-2 py-2 font-bold">{row.name}</td><td className="px-2 py-2">{row.bills}</td><td className="px-2 py-2">{formatCurrency(row.sales)}</td><td className="px-2 py-2 font-black">{formatCurrency(row.commission)}</td></tr>
+                  <tr key={row.name}><td className="font-bold">{row.name}</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell font-black">{formatCurrency(row.commission)}</td></tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         </AdminCard>
 
         <AdminCard title="Create Commission Rule">
@@ -122,7 +116,7 @@ export default async function CommissionPage({
               </Field>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">
-              <fieldset className="rounded-xl border border-stone-200 p-3">
+              <fieldset className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm">
                 <legend className="px-2 text-sm font-bold">Eligible categories</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {categories.map((category) => (
@@ -133,7 +127,7 @@ export default async function CommissionPage({
                   ))}
                 </div>
               </fieldset>
-              <fieldset className="rounded-xl border border-stone-200 p-3">
+              <fieldset className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm">
                 <legend className="px-2 text-sm font-bold">Special/selected items</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {items.map((item) => (
@@ -153,7 +147,7 @@ export default async function CommissionPage({
         <AdminCard title="Configured Rules" eyebrow={`${rules.length} rules`}>
           <div className="grid gap-3">
             {rules.map((rule) => (
-              <article key={rule.id} className="rounded-xl border border-stone-200 p-4">
+              <article key={rule.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
                 <h2 className="font-black">{rule.name}</h2>
                 <p className="mt-1 text-sm text-stone-600">
                   Staff: {rule.staff?.name ?? "Default"} · Normal {rule.normalCommissionPercent}% · Special {rule.specialCommissionPercent}%

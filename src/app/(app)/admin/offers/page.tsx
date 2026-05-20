@@ -29,13 +29,13 @@ export default async function OffersPage() {
   ]);
 
   return (
-    <div className="p-4 text-stone-950 sm:p-6">
-      <div className="mx-auto grid max-w-7xl gap-5">
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
         <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-gold-dark)]">
             Admin
           </p>
-          <h1 className="mt-2 text-3xl font-black">Offer Rules</h1>
+          <h1 className="mt-2 text-2xl font-black">Offer Rules</h1>
           <p className="mt-2 text-stone-600">
             Configure buy rules, free item/category, eligible starter lists,
             date range, approval needs, and waiter choice behavior.
@@ -85,7 +85,7 @@ export default async function OffersPage() {
                 <TextInput name="endDate" type="date" />
               </Field>
             </div>
-            <fieldset className="rounded-xl border border-stone-200 p-3">
+            <fieldset className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm">
               <legend className="px-2 text-sm font-bold text-stone-700">
                 Eligible free items
               </legend>
@@ -112,7 +112,7 @@ export default async function OffersPage() {
         <AdminCard title="Configured Offers" eyebrow={`${offers.length} rules`}>
           <div className="grid gap-3">
             {offers.map((offer) => (
-              <article key={offer.id} className="rounded-xl border border-stone-200 p-4">
+              <article key={offer.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-lg font-black">{offer.name}</h2>
                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">

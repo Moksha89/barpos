@@ -1,4 +1,5 @@
 import { AdminCard } from "@/components/admin-card";
+import { PageHeader, TableShell } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -13,44 +14,39 @@ export default async function AuditPage() {
   });
 
   return (
-    <div className="p-4 text-stone-950 sm:p-6">
-      <div className="mx-auto grid max-w-7xl gap-5">
-        <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
-            Audit
-          </p>
-          <h1 className="mt-2 text-3xl font-black">Sensitive Action Logs</h1>
-          <p className="mt-2 text-stone-600">
-            Tracks offer edits, commission changes, discounts, complimentary
-            additions, expenses, advances, settlements, and settings changes.
-          </p>
-        </header>
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
+        <PageHeader
+          eyebrow="Audit"
+          title="Sensitive Action Logs"
+          subtitle="Tracks offer edits, commission changes, discounts, complimentary additions, expenses, advances, settlements, and settings changes."
+        />
 
         <AdminCard title="Recent Audit Events" eyebrow={`${logs.length} logs`}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+          <TableShell>
+            <table className="premium-table min-w-[860px] text-left">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Time</th>
-                  <th className="px-3 py-2">Action</th>
-                  <th className="px-3 py-2">Entity</th>
-                  <th className="px-3 py-2">User</th>
-                  <th className="px-3 py-2">New Value</th>
+                  <th>Time</th>
+                  <th>Action</th>
+                  <th>Entity</th>
+                  <th>User</th>
+                  <th>New Value</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody>
                 {logs.map((log) => (
                   <tr key={log.id}>
-                    <td className="px-3 py-3">{log.createdAt.toLocaleString("en-AE")}</td>
-                    <td className="px-3 py-3 font-bold">{log.action.replaceAll("_", " ")}</td>
-                    <td className="px-3 py-3">{log.entityType}</td>
-                    <td className="px-3 py-3">{log.user?.name ?? "System/Admin"}</td>
-                    <td className="px-3 py-3">{log.newValue}</td>
+                    <td>{log.createdAt.toLocaleString("en-AE")}</td>
+                    <td className="font-bold">{log.action.replaceAll("_", " ")}</td>
+                    <td>{log.entityType}</td>
+                    <td>{log.user?.name ?? "System/Admin"}</td>
+                    <td>{log.newValue}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         </AdminCard>
       </div>
     </div>

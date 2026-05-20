@@ -8,6 +8,7 @@ import {
   SubmitButton,
   TextInput,
 } from "@/components/form-controls";
+import { StatCard, TableShell } from "@/components/ui";
 import { createExpense } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { dateRangeFromSearchParams } from "@/lib/date-range";
@@ -42,27 +43,21 @@ export default async function ExpensesPage({
   }
 
   return (
-    <div className="p-2.5 text-stone-950 sm:p-4">
-      <div className="mx-auto grid max-w-7xl gap-5">
-        <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
+        <header className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">Expenses</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">Expenses</p>
             <h1 className="mt-1 text-lg font-black sm:text-2xl">Daily Expense Management</h1>
             <p className="mt-1 text-sm text-stone-600">Expenses are deducted from P/L. Filter by any date range.</p>
           </div>
           <DateRangeFilter startDate={range.startDate} endDate={range.endDate} />
         </header>
 
-        <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-xl bg-white p-3 shadow-sm">
-            <p className="text-xs font-semibold text-stone-500">Total expenses</p>
-            <p className="mt-1 text-lg font-black">{formatCurrency(totalExpenseCents)}</p>
-          </article>
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard accent="red" label="Total expenses" value={formatCurrency(totalExpenseCents)} />
           {[...categoryTotals.entries()].slice(0, 3).map(([category, amount]) => (
-            <article className="rounded-xl bg-white p-3 shadow-sm" key={category}>
-              <p className="text-xs font-semibold text-stone-500">{category}</p>
-              <p className="mt-1 text-lg font-black">{formatCurrency(amount)}</p>
-            </article>
+            <StatCard key={category} label={category} value={formatCurrency(amount)} />
           ))}
         </section>
 
@@ -104,32 +99,32 @@ export default async function ExpensesPage({
         </AdminCard>
 
         <AdminCard title="Filtered Expenses" eyebrow={`${expenses.length} rows`}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+          <TableShell>
+            <table className="premium-table min-w-[720px] text-left">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Amount</th>
-                  <th className="px-3 py-2">Mode</th>
-                  <th className="px-3 py-2">Paid To</th>
-                  <th className="px-3 py-2">Notes</th>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th className="currency-cell">Amount</th>
+                  <th>Mode</th>
+                  <th>Paid To</th>
+                  <th>Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody>
                 {expenses.map((expense) => (
                   <tr key={expense.id}>
-                    <td className="px-3 py-3">{expense.expenseDate.toLocaleDateString("en-AE")}</td>
-                    <td className="px-3 py-3">{expense.category.name}</td>
-                    <td className="px-3 py-3 font-bold">{formatCurrency(expense.amountCents)}</td>
-                    <td className="px-3 py-3">{expense.paymentMode}</td>
-                    <td className="px-3 py-3">{expense.paidTo}</td>
-                    <td className="px-3 py-3">{expense.notes}</td>
+                    <td className="font-bold">{expense.expenseDate.toLocaleDateString("en-AE")}</td>
+                    <td>{expense.category.name}</td>
+                    <td className="currency-cell font-bold">{formatCurrency(expense.amountCents)}</td>
+                    <td>{expense.paymentMode}</td>
+                    <td>{expense.paidTo}</td>
+                    <td>{expense.notes}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         </AdminCard>
       </div>
     </div>

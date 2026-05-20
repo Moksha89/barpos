@@ -6,6 +6,7 @@ import {
   SubmitButton,
   TextInput,
 } from "@/components/form-controls";
+import { PageHeader, StatusBadge, TableShell } from "@/components/ui";
 import { createCategory, createItem } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -24,18 +25,13 @@ export default async function ProductsPage() {
   ]);
 
   return (
-    <div className="p-4 text-stone-950 sm:p-6">
-      <div className="mx-auto grid max-w-7xl gap-5">
-        <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
-            Admin
-          </p>
-          <h1 className="mt-2 text-3xl font-black">Products & Inventory</h1>
-          <p className="mt-2 text-stone-600">
-            Configure sell price, purchase cost, stock, tax, commission flags,
-            special drinks, and complimentary eligibility.
-          </p>
-        </header>
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
+        <PageHeader
+          eyebrow="Admin"
+          title="Products & Inventory"
+          subtitle="Configure sell price, purchase cost, stock, tax, commission flags, special drinks, and complimentary eligibility."
+        />
 
         <div className="grid gap-5 lg:grid-cols-2">
           <AdminCard title="Add Category" description="Create configurable product groups for POS tabs and rules.">
@@ -101,38 +97,59 @@ export default async function ProductsPage() {
         </div>
 
         <AdminCard title="Configured Items" eyebrow={`${items.length} items`}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+          <div className="desktop-table-only">
+          <TableShell>
+            <table className="premium-table min-w-[900px] text-left">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Item</th>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Sell</th>
-                  <th className="px-3 py-2">Cost</th>
-                  <th className="px-3 py-2">Stock</th>
-                  <th className="px-3 py-2">Flags</th>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th className="currency-cell">Sell</th>
+                  <th className="currency-cell">Cost</th>
+                  <th>Stock</th>
+                  <th>Flags</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody>
                 {items.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-3 py-3 font-bold">{item.name}</td>
-                    <td className="px-3 py-3">{item.category.name}</td>
-                    <td className="px-3 py-3">{formatCurrency(item.sellingPriceCents)}</td>
-                    <td className="px-3 py-3">{formatCurrency(item.purchaseCostCents)}</td>
-                    <td className="px-3 py-3">{item.stockQuantity} {item.unitType}</td>
-                    <td className="px-3 py-3 text-xs">
-                      {[
-                        item.commissionEligible ? "commission" : null,
-                        item.specialCommissionEligible ? "special" : null,
-                        item.complimentaryEligible ? "complimentary" : null,
-                        item.active ? "active" : "inactive",
-                      ].filter(Boolean).join(" / ")}
+                    <td className="font-bold">{item.name}</td>
+                    <td>{item.category.name}</td>
+                    <td className="currency-cell font-bold">{formatCurrency(item.sellingPriceCents)}</td>
+                    <td className="currency-cell">{formatCurrency(item.purchaseCostCents)}</td>
+                    <td>{item.stockQuantity} {item.unitType}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        {item.commissionEligible ? <StatusBadge tone="gold">commission</StatusBadge> : null}
+                        {item.specialCommissionEligible ? <StatusBadge tone="warning">special</StatusBadge> : null}
+                        {item.complimentaryEligible ? <StatusBadge tone="success">complimentary</StatusBadge> : null}
+                        <StatusBadge tone={item.active ? "success" : "danger"}>{item.active ? "active" : "inactive"}</StatusBadge>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </TableShell>
+          </div>
+          <div className="mobile-card-list">
+            {items.map((item) => (
+              <article className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm" key={item.id}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-black">{item.name}</p>
+                    <p className="text-xs text-stone-500">{item.category.name} · {item.stockQuantity} {item.unitType}</p>
+                  </div>
+                  <b className="text-[var(--color-gold-dark)]">{formatCurrency(item.sellingPriceCents)}</b>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {item.commissionEligible ? <StatusBadge tone="gold">commission</StatusBadge> : null}
+                  {item.specialCommissionEligible ? <StatusBadge tone="warning">special</StatusBadge> : null}
+                  {item.complimentaryEligible ? <StatusBadge tone="success">complimentary</StatusBadge> : null}
+                  <StatusBadge tone={item.active ? "success" : "danger"}>{item.active ? "active" : "inactive"}</StatusBadge>
+                </div>
+              </article>
+            ))}
           </div>
         </AdminCard>
       </div>

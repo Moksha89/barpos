@@ -20,13 +20,13 @@ export default async function StaffPage() {
   const staff = await prisma.staff.findMany({ orderBy: { createdAt: "desc" } });
 
   return (
-    <div className="p-4 text-stone-950 sm:p-6">
-      <div className="mx-auto grid max-w-7xl gap-5">
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
         <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-gold-dark)]">
             Admin
           </p>
-          <h1 className="mt-2 text-3xl font-black">Staff & Waitress Profiles</h1>
+          <h1 className="mt-2 text-2xl font-black">Staff & Waitress Profiles</h1>
           <p className="mt-2 text-stone-600">
             Configure salary, normal commission, special drink commission, roles,
             and active status.
@@ -67,7 +67,7 @@ export default async function StaffPage() {
         <AdminCard title="Configured Staff" eyebrow={`${staff.length} staff`}>
           <div className="grid gap-3 md:grid-cols-2">
             {staff.map((member) => (
-              <article key={member.id} className="rounded-xl border border-stone-200 p-4">
+              <article key={member.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-black">{member.name}</h2>
                   <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold">

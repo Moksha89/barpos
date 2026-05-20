@@ -2,6 +2,7 @@ import { PaymentMode } from "@prisma/client";
 import Link from "next/link";
 
 import { AdminCard } from "@/components/admin-card";
+import { TableShell } from "@/components/ui";
 import {
   Field,
   SelectInput,
@@ -37,10 +38,10 @@ export default async function SettlementsPage() {
   ]);
 
   return (
-    <div className="p-2.5 text-stone-950 sm:p-4">
-      <div className="mx-auto grid max-w-7xl gap-3">
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
         <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-gold-dark)]">
             Settlements
           </p>
           <h1 className="mt-2 text-lg font-black">Waitress Settlement</h1>
@@ -122,45 +123,45 @@ export default async function SettlementsPage() {
         </div>
 
         <AdminCard title="Recent Settlements" eyebrow={`${settlements.length} settlements`}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+          <TableShell>
+            <table className="premium-table min-w-[900px] text-left">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Receipt</th>
-                  <th className="px-3 py-2">Staff</th>
-                  <th className="px-3 py-2">Commission</th>
-                  <th className="px-3 py-2">Tips</th>
-                  <th className="px-3 py-2">Advance</th>
-                  <th className="px-3 py-2">Paid</th>
-                  <th className="px-3 py-2">Pending</th>
+                  <th>Receipt</th>
+                  <th>Staff</th>
+                  <th className="currency-cell">Commission</th>
+                  <th className="currency-cell">Tips</th>
+                  <th className="currency-cell">Advance</th>
+                  <th className="currency-cell">Paid</th>
+                  <th className="currency-cell">Pending</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody>
                 {settlements.map((settlement) => (
                   <tr key={settlement.id}>
-                    <td className="px-3 py-2 font-bold">
-                      <Link className="text-amber-700 underline" href={`/invoices/settlement/${settlement.id}`}>
+                    <td className="font-bold">
+                      <Link className="text-[var(--color-gold-dark)] underline" href={`/invoices/settlement/${settlement.id}`}>
                         {settlement.receiptNumber}
                       </Link>
                     </td>
-                    <td className="px-3 py-2">{settlement.staff.name}</td>
-                    <td className="px-3 py-2">{formatCurrency(settlement.totalCommissionCents)}</td>
-                    <td className="px-3 py-2">{formatCurrency(settlement.tipsCents)}</td>
-                    <td className="px-3 py-2">{formatCurrency(settlement.advanceDeductedCents)}</td>
-                    <td className="px-3 py-2">{formatCurrency(settlement.amountPaidCents)}</td>
-                    <td className="px-3 py-2">{formatCurrency(settlement.remainingPendingCents)}</td>
+                    <td>{settlement.staff.name}</td>
+                    <td className="currency-cell">{formatCurrency(settlement.totalCommissionCents)}</td>
+                    <td className="currency-cell">{formatCurrency(settlement.tipsCents)}</td>
+                    <td className="currency-cell">{formatCurrency(settlement.advanceDeductedCents)}</td>
+                    <td className="currency-cell font-bold">{formatCurrency(settlement.amountPaidCents)}</td>
+                    <td className="currency-cell">{formatCurrency(settlement.remainingPendingCents)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         </AdminCard>
 
         <div className="grid gap-3 lg:grid-cols-2">
           <AdminCard title="Advance Balances" eyebrow={`${advances.length} advances`}>
             <div className="grid gap-2">
               {advances.map((advance) => (
-                <div key={advance.id} className="rounded-xl border border-stone-200 p-3 text-sm">
+                <div key={advance.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm text-sm">
                   <b>{advance.staff.name}</b> · {formatCurrency(advance.amountCents)} · deducted {formatCurrency(advance.deductedCents)} · {advance.deductionStatus}
                 </div>
               ))}
@@ -170,7 +171,7 @@ export default async function SettlementsPage() {
           <AdminCard title="Staff Ledger" eyebrow={`${ledgerEntries.length} entries`}>
             <div className="grid max-h-[440px] gap-2 overflow-y-auto">
               {ledgerEntries.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-stone-200 p-3 text-sm">
+                <div key={entry.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm text-sm">
                   <div className="flex justify-between gap-3">
                     <b>{entry.staff.name}</b>
                     <span>{entry.type.replaceAll("_", " ")}</span>

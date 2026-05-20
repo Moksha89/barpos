@@ -12,13 +12,13 @@ export function AdminCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm sm:p-4">
+    <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
       {eyebrow ? (
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-700">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-gold-dark)]">
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-1 text-lg font-black sm:text-xl">{title}</h2>
+      <h2 className="mt-1 text-base font-black text-stone-950 sm:text-lg">{title}</h2>
       {description ? <p className="mt-1 text-xs text-stone-600 sm:text-sm">{description}</p> : null}
       <div className="mt-3">{children}</div>
     </section>

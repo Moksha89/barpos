@@ -1,5 +1,6 @@
 import { AdminCard } from "@/components/admin-card";
 import { DateRangeFilter } from "@/components/date-range-filter";
+import { StatCard, TableShell } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import { dateRangeFromSearchParams, groupDateKey } from "@/lib/date-range";
 import { prisma } from "@/lib/db";
@@ -108,51 +109,44 @@ export default async function ReportsPage({
     .sort((a, b) => b.date.localeCompare(a.date));
 
   return (
-    <div className="p-2.5 text-stone-950 sm:p-4">
-      <div className="mx-auto grid max-w-7xl gap-3">
-        <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
+        <header className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">Reports</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">Reports</p>
             <h1 className="mt-1 text-lg font-black sm:text-2xl">Sales, commission and P/L</h1>
             <p className="mt-1 text-sm text-stone-600">Filter any date range for sales, tips, expenses, daily P/L and top waitresses.</p>
           </div>
           <DateRangeFilter startDate={range.startDate} endDate={range.endDate} />
         </header>
 
-        <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-          {[
-            ["Total Sales", formatCurrency(orderSummary.netSalesCents)],
-            ["Total Commission", formatCurrency(totalCommissionCents)],
-            ["Total Tips", formatCurrency(orderSummary.tipsCents)],
-            ["Expenses", formatCurrency(expenseCents)],
-            ["P/L", formatCurrency(netProfitCents)],
-            ["Bills", String(orderSummary.totalBills)],
-          ].map(([label, value]) => (
-            <article key={label} className="rounded-xl bg-white p-3 shadow-sm">
-              <p className="text-xs font-semibold text-stone-500">{label}</p>
-              <p className="mt-1 text-lg font-black sm:text-xl">{value}</p>
-            </article>
-          ))}
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <StatCard label="Total Sales" value={formatCurrency(orderSummary.netSalesCents)} />
+          <StatCard accent="gold" label="Total Commission" value={formatCurrency(totalCommissionCents)} />
+          <StatCard accent="green" label="Total Tips" value={formatCurrency(orderSummary.tipsCents)} />
+          <StatCard accent="red" label="Expenses" value={formatCurrency(expenseCents)} />
+          <StatCard accent={netProfitCents >= 0 ? "green" : "red"} label="P/L" value={formatCurrency(netProfitCents)} />
+          <StatCard accent="dark" label="Bills" value={orderSummary.totalBills} />
         </section>
 
         <div className="grid gap-3 xl:grid-cols-2">
           <AdminCard title="Daily report" eyebrow={`${daily.length} days`}>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="text-xs uppercase text-stone-500">
+            <TableShell>
+              <table className="premium-table min-w-[760px] text-left">
+                <thead>
                   <tr>
-                    <th className="px-2 py-2">Date</th><th className="px-2 py-2">Bills</th><th className="px-2 py-2">Sales</th><th className="px-2 py-2">Commission</th><th className="px-2 py-2">Tips</th><th className="px-2 py-2">Expenses</th><th className="px-2 py-2">P/L</th>
+                    <th>Date</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th><th className="currency-cell">Tips</th><th className="currency-cell">Expenses</th><th className="currency-cell">P/L</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
+                <tbody>
                   {daily.map((row) => (
                     <tr key={row.date}>
-                      <td className="px-2 py-2 font-bold">{row.date}</td><td className="px-2 py-2">{row.bills}</td><td className="px-2 py-2">{formatCurrency(row.sales)}</td><td className="px-2 py-2">{formatCurrency(row.commission)}</td><td className="px-2 py-2">{formatCurrency(row.tips)}</td><td className="px-2 py-2">{formatCurrency(row.expenses)}</td><td className="px-2 py-2 font-black">{formatCurrency(row.profit)}</td>
+                      <td className="font-bold">{row.date}</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td><td className="currency-cell">{formatCurrency(row.expenses)}</td><td className="currency-cell font-black">{formatCurrency(row.profit)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableShell>
           </AdminCard>
 
           <AdminCard title="Profit / Loss summary">
@@ -186,16 +180,16 @@ export default async function ReportsPage({
         </div>
 
         <AdminCard title="Waitress commission detail" eyebrow={`${staffRows.length} staff`}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500"><tr><th className="px-2 py-2">Waitress</th><th className="px-2 py-2">Bills</th><th className="px-2 py-2">Sales</th><th className="px-2 py-2">Commission</th><th className="px-2 py-2">Tips</th></tr></thead>
-              <tbody className="divide-y divide-stone-100">
+          <TableShell>
+            <table className="premium-table min-w-[620px] text-left">
+              <thead><tr><th>Waitress</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th><th className="currency-cell">Tips</th></tr></thead>
+              <tbody>
                 {staffRows.sort((a, b) => b.commission - a.commission).map((row) => (
-                  <tr key={row.name}><td className="px-2 py-2 font-bold">{row.name}</td><td className="px-2 py-2">{row.bills}</td><td className="px-2 py-2">{formatCurrency(row.sales)}</td><td className="px-2 py-2">{formatCurrency(row.commission)}</td><td className="px-2 py-2">{formatCurrency(row.tips)}</td></tr>
+                  <tr key={row.name}><td className="font-bold">{row.name}</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell font-black">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td></tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         </AdminCard>
 
         <div className="grid gap-3 lg:grid-cols-2">
@@ -221,14 +215,14 @@ export default async function ReportsPage({
 }
 
 function Ranking({ rows, valueKey }: { rows: { name: string; sales: number; commission: number }[]; valueKey: "sales" | "commission" }) {
-  return <div className="grid gap-2">{rows.map((row, index) => <div className="flex items-center justify-between rounded-xl bg-stone-50 p-2.5 text-sm" key={row.name}><span><b>#{index + 1} {row.name}</b></span><b className="text-amber-700">{formatCurrency(row[valueKey])}</b></div>)}</div>;
+  return <div className="grid gap-2">{rows.map((row, index) => <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-stone-50 p-2.5 text-sm" key={row.name}><span><b>#{index + 1} {row.name}</b></span><b className="text-[var(--color-gold-dark)]">{formatCurrency(row[valueKey])}</b></div>)}</div>;
 }
 
 function Breakdown({ rows }: { rows: [string, number][] }) {
-  return <div className="grid gap-2 sm:grid-cols-2">{rows.map(([label, amount]) => <div className="rounded-xl bg-stone-50 p-2.5" key={label}><p className="text-xs font-semibold text-stone-500">{label}</p><p className="text-base font-black">{formatCurrency(amount)}</p></div>)}</div>;
+  return <div className="grid gap-2 sm:grid-cols-2">{rows.map(([label, amount]) => <div className="rounded-xl border border-[var(--color-border)] bg-stone-50 p-2.5" key={label}><p className="text-xs font-semibold text-stone-500">{label}</p><p className="text-base font-black">{formatCurrency(amount)}</p></div>)}</div>;
 }
 
 function ListRows({ rows }: { rows: string[][] }) {
   if (rows.length === 0) return <p className="text-sm text-stone-500">No rows in this date range.</p>;
-  return <div className="grid max-h-[360px] gap-2 overflow-y-auto">{rows.map(([title, body], index) => <div className="rounded-xl border border-stone-200 p-2.5 text-sm" key={`${title}-${index}`}><b>{title}</b><span className="text-stone-600"> · {body}</span></div>)}</div>;
+  return <div className="grid max-h-[360px] gap-2 overflow-y-auto">{rows.map(([title, body], index) => <div className="rounded-xl border border-[var(--color-border)] bg-stone-50 p-2.5 text-sm" key={`${title}-${index}`}><b>{title}</b><span className="text-stone-600"> · {body}</span></div>)}</div>;
 }

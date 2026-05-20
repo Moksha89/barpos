@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { differenceInMinutes } from "date-fns";
+import { Plus, ReceiptText, Table2 } from "lucide-react";
 
 import { SubmitButton } from "@/components/form-controls";
+import { ButtonLink, EmptyState, PageHeader, StatCard, StatusBadge } from "@/components/ui";
 import { settlePendingOrder } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -40,33 +42,31 @@ export default async function TablesPage({
     : pendingOrders;
 
   return (
-    <div className="p-2.5 text-stone-950 sm:p-4">
-      <div className="mx-auto grid max-w-7xl gap-3">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
-              Tables
-            </p>
-            <h1 className="mt-1 text-lg font-black">Active tables</h1>
-            <p className="mt-1 text-sm text-stone-600">
-              Business day {businessDay.businessDate.toLocaleDateString("en-AE")} · {businessDay.status}
-            </p>
-          </div>
-          <Link className="rounded-xl bg-amber-400 px-3 py-2 text-center font-black text-stone-950" href="/tables/new">
-            Add New Table
-          </Link>
-        </header>
+    <div className="app-page text-stone-950">
+      <div className="grid gap-4">
+        <PageHeader
+          eyebrow="Tables"
+          title="Active tables"
+          subtitle={`Business day ${businessDay.businessDate.toLocaleDateString("en-AE")} · ${businessDay.status}`}
+          action={<ButtonLink href="/tables/new"><Plus className="h-4 w-4" />Add New Table</ButtonLink>}
+        />
 
-        <nav className="flex gap-2 overflow-x-auto pb-1">
+        <section className="grid gap-3 sm:grid-cols-3">
+          <StatCard accent="dark" icon={Table2} label="Open tables" value={openTables.length} helper="Running bills" />
+          <StatCard icon={ReceiptText} label="Visible" value={visibleTables.length} helper="After waitress filter" />
+          <StatCard accent="red" label="Pending bills" value={visiblePendingOrders.length} helper="Unpaid collection" />
+        </section>
+
+        <nav className="flex gap-2 overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-sm">
           <Link
-            className={`rounded-full px-3 py-2 text-sm font-black ${!params.staffId ? "bg-stone-950 text-white" : "bg-white text-stone-700"}`}
+            className={`shrink-0 rounded-full px-3 py-2 text-xs font-black transition ${!params.staffId ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-700 hover:bg-amber-50"}`}
             href="/tables"
           >
             All waitresses
           </Link>
           {staff.map((member) => (
             <Link
-              className={`rounded-full px-3 py-2 text-sm font-black ${params.staffId === member.id ? "bg-stone-950 text-white" : "bg-white text-stone-700"}`}
+              className={`shrink-0 rounded-full px-3 py-2 text-xs font-black transition ${params.staffId === member.id ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-700 hover:bg-amber-50"}`}
               href={`/tables?staffId=${member.id}`}
               key={member.id}
             >
@@ -76,6 +76,9 @@ export default async function TablesPage({
         </nav>
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {visibleTables.length === 0 ? (
+            <EmptyState title="No active tables found" description="Create a new table or clear the waitress filter." />
+          ) : null}
           {visibleTables.map((table) => {
             const bill = table.orders.reduce(
               (total, order) => total + order.netSalesCents + order.tipCents,
@@ -83,30 +86,30 @@ export default async function TablesPage({
             );
             const latestOrder = table.orders[0];
             return (
-              <article key={table.id} className="rounded-xl bg-white p-3 shadow-sm">
+              <article key={table.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">
                       Table {table.tableNumber}
                     </p>
                     <h2 className="text-lg font-black">{table.tableName}</h2>
                   </div>
-                  <b className="text-lg text-amber-700">{formatCurrency(bill)}</b>
+                  <b className="rounded-xl bg-amber-50 px-3 py-1.5 text-lg text-[var(--color-gold-dark)]">{formatCurrency(bill)}</b>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-stone-600">
                   <p><b>Customer</b><br />{table.customerName || "Walk-in"}</p>
                   <p><b>Waitress</b><br />{table.staff.name}</p>
-                  <p><b>Order</b><br />{latestOrder?.status ?? "Open"}</p>
+                  <p><b>Order</b><br /><StatusBadge tone="warning">{latestOrder?.status ?? "Open"}</StatusBadge></p>
                   <p><b>Open</b><br />{Math.max(differenceInMinutes(new Date(), table.openedAt), 0)} min</p>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {table.status === "OPEN" ? (
-                    <Link className="rounded-xl bg-stone-950 px-3 py-2 text-center text-sm font-black text-white" href={`/pos?tableId=${table.id}`}>
+                    <Link className="rounded-lg bg-stone-950 px-3 py-2 text-center text-sm font-black text-white transition hover:bg-stone-800" href={`/pos?tableId=${table.id}`}>
                       Continue Billing
                     </Link>
                   ) : null}
                   {latestOrder ? (
-                    <Link className="rounded-xl border border-stone-200 px-3 py-2 text-center text-sm font-black text-stone-950" href={`/invoices/customer/${latestOrder.id}`}>
+                    <Link className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-center text-sm font-black text-stone-950 transition hover:bg-stone-50" href={`/invoices/customer/${latestOrder.id}`}>
                       Print Invoice
                     </Link>
                   ) : null}
@@ -123,22 +126,20 @@ export default async function TablesPage({
           </p>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {visiblePendingOrders.length === 0 ? (
-              <article className="rounded-xl border border-dashed border-stone-300 bg-white p-4 text-sm text-stone-600">
-                No pending bills for this filter.
-              </article>
+              <EmptyState title="No pending bills" description="No pending bills for this filter." />
             ) : (
               visiblePendingOrders.map((order) => {
                 const due = order.netSalesCents + order.tipCents;
                 return (
-                  <article className="rounded-xl border border-amber-200 bg-white p-3 shadow-sm" key={order.id}>
+                  <article className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm" key={order.id}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700">
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">
                           {order.staff.name}
                         </p>
                         <h3 className="text-lg font-black">{order.tableNumber ?? order.table?.tableName ?? order.billNumber}</h3>
                       </div>
-                      <b className="text-lg text-amber-700">{formatCurrency(due)}</b>
+                      <b className="rounded-xl bg-amber-50 px-3 py-1.5 text-lg text-[var(--color-gold-dark)]">{formatCurrency(due)}</b>
                     </div>
                     <p className="mt-1 text-sm text-stone-600">
                       Customer: {order.customerName || "Walk-in"} · Bill {order.billNumber}
@@ -146,7 +147,7 @@ export default async function TablesPage({
                     <form action={settlePendingOrder} className="mt-3 grid gap-2">
                       <input name="orderId" type="hidden" value={order.id} />
                       <input name="amount" type="hidden" value={due / 100} />
-                      <select className="min-h-10 rounded-xl border border-stone-200 px-3 text-sm" name="paymentMethodId">
+                      <select className="min-h-10 rounded-lg border border-[var(--color-border)] px-3 text-sm" name="paymentMethodId">
                         {paymentMethods.map((method) => (
                           <option key={method.id} value={method.id}>{method.name}</option>
                         ))}

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { differenceInMinutes } from "date-fns";
+import { BadgeDollarSign, CalendarClock, CheckCircle2, Plus, Table2 } from "lucide-react";
 
 import { closeBusinessDay, openBusinessDay } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { formatCurrency } from "@/lib/money";
 import { getActiveTableCards } from "@/lib/tables";
+import { Button, ButtonLink, EmptyState, PageHeader, StatCard, StatusBadge, TableShell } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -35,81 +37,58 @@ export default async function Home() {
   );
 
   return (
-    <div className="p-2.5 text-stone-950 sm:p-4">
-      <section className="rounded-xl bg-stone-950 px-3 py-4 text-white sm:px-5">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
-              Active Tables
-            </p>
-            <h1 className="mt-1 max-w-3xl text-lg font-black tracking-tight sm:text-xl">
-              Table billing dashboard
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-stone-300">
-              Save orders during dinner, reopen active tables, settle at the end, or keep unpaid bills pending by waitress.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
+    <div className="app-page text-stone-950">
+      <PageHeader
+        eyebrow="Active Tables"
+        title="Table billing dashboard"
+        subtitle="Save running orders, reopen active tables, settle at the end, or keep unpaid bills pending by waitress."
+        action={
+          <>
             <form action={openBusinessDay}>
-              <button className="min-h-10 rounded-xl bg-white px-3 font-black text-stone-950" type="submit">
+              <Button size="md" type="submit" variant="secondary">
                 Open Day
-              </button>
+              </Button>
             </form>
             <form action={closeBusinessDay}>
-              <button className="min-h-10 rounded-xl border border-white/20 px-3 font-black text-white" type="submit">
+              <Button size="md" type="submit" variant="dark">
                 Close Day
-              </button>
+              </Button>
             </form>
-            <Link
-              href="/tables/new"
-              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-amber-400 px-3 py-2 text-sm font-bold text-stone-950"
-            >
+            <ButtonLink href="/tables/new" size="md">
+              <Plus className="h-4 w-4" />
               Add New Table
-            </Link>
-          </div>
-        </div>
+            </ButtonLink>
+          </>
+        }
+      />
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={CalendarClock} label="Day Status" value={businessDay.status} helper={businessDay.businessDate.toLocaleDateString("en-AE")} />
+        <StatCard icon={Table2} label="Open Tables" value={openTables.length} helper="Currently billing" accent="dark" />
+        <StatCard icon={CheckCircle2} label="Settled Bills" value={settledTables.length} helper="Paid/closed today" accent="green" />
+        <StatCard icon={BadgeDollarSign} label="Today Sales" value={formatCurrency(todaySalesCents)} helper={`Active ${formatCurrency(activeBillCents)}`} />
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-3 px-2 py-4 sm:grid-cols-2 sm:px-3 lg:grid-cols-4 lg:px-6">
-        {[
-          ["Day Status", businessDay.status, businessDay.businessDate.toLocaleDateString("en-AE")],
-          ["Open Tables", String(openTables.length), "Currently billing"],
-          ["Settled Bills", String(settledTables.length), "Paid/closed today"],
-          ["Today Sales", formatCurrency(todaySalesCents), `Active ${formatCurrency(activeBillCents)}`],
-        ].map(([label, value, note]) => (
-          <article
-            key={label}
-            className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm"
-          >
-            <p className="text-sm font-medium text-stone-500">{label}</p>
-            <p className="mt-1 text-lg font-black text-stone-950">
-              {value}
-            </p>
-            <p className="mt-1 text-sm text-stone-500">{note}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="mx-auto grid max-w-7xl gap-3 px-2 pb-8 sm:px-3 lg:px-6">
+      <section className="grid gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-black">Open tables</h2>
             <p className="text-sm text-stone-600">Cards stay active until the table bill is settled.</p>
           </div>
-          <Link className="rounded-xl bg-stone-950 px-3 py-2 text-center text-sm font-black text-white" href="/tables">
+          <Link className="rounded-lg bg-stone-950 px-3 py-2 text-center text-sm font-black text-white transition hover:bg-stone-800" href="/tables">
             View all tables
           </Link>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {openTables.length === 0 ? (
-            <article className="rounded-xl border border-dashed border-stone-300 bg-white p-4 text-center">
-              <h3 className="text-lg font-black">No active tables</h3>
-              <p className="mt-1 text-sm text-stone-600">Create the first bill for today&apos;s service.</p>
-              <Link className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-amber-400 px-5 font-black text-stone-950" href="/tables/new">
+            <EmptyState
+              title="No active tables"
+              description="Create the first bill for today's service."
+              action={<ButtonLink href="/tables/new" size="lg">
                 Add New Table
-              </Link>
-            </article>
+              </ButtonLink>}
+            />
           ) : (
             openTables.map((table) => {
               const minutes = differenceInMinutes(new Date(), table.openedAt);
@@ -118,15 +97,16 @@ export default async function Home() {
                 0,
               );
               return (
-                <article key={table.id} className="rounded-xl bg-white p-3 shadow-sm">
+                <article key={table.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">
                         Table {table.tableNumber}
                       </p>
                       <h3 className="mt-1 text-lg font-black">{table.tableName}</h3>
+                      <div className="mt-2"><StatusBadge tone="warning">Open</StatusBadge></div>
                     </div>
-                    <b className="text-lg text-amber-700">{formatCurrency(billAmount)}</b>
+                    <b className="rounded-xl bg-amber-50 px-3 py-1.5 text-lg text-[var(--color-gold-dark)]">{formatCurrency(billAmount)}</b>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-stone-600">
                     <p><b>Customer</b><br />{table.customerName || "Walk-in"}</p>
@@ -135,7 +115,7 @@ export default async function Home() {
                     <p><b>Open</b><br />{minutes < 1 ? "Just opened" : `${minutes} min`}</p>
                   </div>
                   <Link
-                    className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-stone-950 font-black text-white"
+                    className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-stone-950 font-black text-white transition hover:bg-stone-800"
                     href={`/pos?tableId=${table.id}`}
                   >
                     Continue Billing
@@ -148,31 +128,32 @@ export default async function Home() {
 
         <div>
           <h2 className="text-lg font-black">Completed / paid bills</h2>
-          <div className="mt-3 overflow-x-auto rounded-xl bg-white shadow-sm">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+          <div className="mt-3">
+          <TableShell>
+            <table className="premium-table min-w-[760px] text-left">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Table</th>
-                  <th className="px-3 py-2">Customer</th>
-                  <th className="px-3 py-2">Staff</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Bill</th>
-                  <th className="px-3 py-2">Action</th>
+                  <th>Table</th>
+                  <th>Customer</th>
+                  <th>Staff</th>
+                  <th>Status</th>
+                  <th className="currency-cell">Bill</th>
+                  <th>Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody>
                 {settledTables.map((table) => {
                   const order = table.orders[0];
                   return (
                     <tr key={table.id}>
-                      <td className="px-3 py-2 font-bold">{table.tableName}</td>
-                      <td className="px-3 py-2">{table.customerName || "Walk-in"}</td>
-                      <td className="px-3 py-2">{table.staff.name}</td>
-                      <td className="px-3 py-2">{table.status}</td>
-                      <td className="px-3 py-2">{formatCurrency(order?.netSalesCents ?? 0)}</td>
-                      <td className="px-3 py-2">
+                      <td className="font-bold">{table.tableName}</td>
+                      <td>{table.customerName || "Walk-in"}</td>
+                      <td>{table.staff.name}</td>
+                      <td><StatusBadge tone="success">{table.status}</StatusBadge></td>
+                      <td className="currency-cell font-black">{formatCurrency(order?.netSalesCents ?? 0)}</td>
+                      <td>
                         {order ? (
-                          <Link className="font-black text-amber-700" href={`/invoices/customer/${order.id}`}>
+                          <Link className="font-black text-[var(--color-gold-dark)]" href={`/invoices/customer/${order.id}`}>
                             Print invoice
                           </Link>
                         ) : (
@@ -184,6 +165,7 @@ export default async function Home() {
                 })}
               </tbody>
             </table>
+          </TableShell>
           </div>
         </div>
       </section>
