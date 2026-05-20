@@ -1,3 +1,4 @@
+import { Camera, Plus } from "lucide-react";
 import { PaymentMode } from "@prisma/client";
 
 import { AdminCard } from "@/components/admin-card";
@@ -48,8 +49,8 @@ export default async function ExpensesPage({
         <header className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">Expenses</p>
-            <h1 className="mt-1 text-lg font-black sm:text-2xl">Daily Expense Management</h1>
-            <p className="mt-1 text-sm text-stone-600">Expenses are deducted from P/L. Filter by any date range.</p>
+            <h1 className="mt-1 text-lg font-black sm:text-2xl">Expenses</h1>
+            <p className="mt-1 text-sm text-stone-600">Add date, amount, reason and bill photo URL. Filter history by any date range.</p>
           </div>
           <DateRangeFilter startDate={range.startDate} endDate={range.endDate} />
         </header>
@@ -61,7 +62,7 @@ export default async function ExpensesPage({
           ))}
         </section>
 
-        <AdminCard title="Add Expense">
+        <AdminCard title="Add Expense" eyebrow="Create">
           <form action={createExpense} className="grid gap-3 md:grid-cols-3">
             <Field label="Expense date">
               <TextInput name="expenseDate" type="date" required />
@@ -83,22 +84,22 @@ export default async function ExpensesPage({
                 ))}
               </SelectInput>
             </Field>
-            <Field label="Paid to">
-              <TextInput name="paidTo" required />
+            <Field label="Reason">
+              <TextInput name="paidTo" placeholder="Food order / maintenance / supplies" required />
             </Field>
-            <Field label="Attachment URL optional">
-              <TextInput name="attachmentUrl" />
+            <Field label="Photo URL">
+              <TextInput name="attachmentUrl" placeholder="Paste uploaded bill/photo link" />
             </Field>
             <Field label="Notes">
-              <TextInput name="notes" />
+              <TextInput name="notes" placeholder="Optional details" />
             </Field>
             <div className="flex items-end">
-              <SubmitButton>Add expense</SubmitButton>
+              <SubmitButton><Plus className="h-4 w-4" />Add expense</SubmitButton>
             </div>
           </form>
         </AdminCard>
 
-        <AdminCard title="Filtered Expenses" eyebrow={`${expenses.length} rows`}>
+        <AdminCard title="Expense History" eyebrow={`${expenses.length} rows`}>
           <TableShell>
             <table className="premium-table min-w-[720px] text-left">
               <thead>
@@ -107,8 +108,8 @@ export default async function ExpensesPage({
                   <th>Category</th>
                   <th className="currency-cell">Amount</th>
                   <th>Mode</th>
-                  <th>Paid To</th>
-                  <th>Notes</th>
+                  <th>Reason</th>
+                  <th>Photo / Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,7 +120,19 @@ export default async function ExpensesPage({
                     <td className="currency-cell font-bold">{formatCurrency(expense.amountCents)}</td>
                     <td>{expense.paymentMode}</td>
                     <td>{expense.paidTo}</td>
-                    <td>{expense.notes}</td>
+                    <td>
+                      {expense.attachmentUrl ? (
+                        <a
+                          className="inline-flex items-center gap-1 font-bold text-[var(--color-gold-dark)]"
+                          href={expense.attachmentUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <Camera className="h-3.5 w-3.5" />
+                          Photo
+                        </a>
+                      ) : expense.notes ?? "-"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

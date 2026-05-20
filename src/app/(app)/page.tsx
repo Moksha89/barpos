@@ -5,6 +5,8 @@ import {
   CalendarClock,
   ClipboardList,
   Clock,
+  CreditCard,
+  Edit3,
   Filter,
   MoreVertical,
   Moon,
@@ -111,15 +113,15 @@ export default async function Home() {
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-lg font-black">Open tables</h2>
+            <h2 className="text-lg font-black">Billing</h2>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-stone-600">
               <Clock className="h-4 w-4" />
-              Cards stay active until the table bill is settled.
+              Active tables, order edits, pending bills, settlement and today sales in one place.
             </p>
           </div>
           <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] px-4 text-sm font-black text-stone-950 transition hover:bg-stone-50" href="/tables">
             <ClipboardList className="h-4 w-4" />
-            View all tables
+            Billing details
           </Link>
         </div>
 
@@ -177,14 +179,22 @@ export default async function Home() {
                   </div>
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">
                     <Link
-                      className="inline-flex min-h-10 items-center justify-center rounded-lg bg-stone-950 px-3 text-sm font-black text-white transition hover:bg-stone-800"
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-stone-950 px-3 text-sm font-black text-white transition hover:bg-stone-800"
                       href={`/pos?tableId=${table.id}`}
                     >
-                      Continue Billing
+                      <Edit3 className="h-4 w-4" />
+                      Add / edit order
+                    </Link>
+                    <Link
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] px-3 text-sm font-black text-stone-950 transition hover:bg-stone-50"
+                      href={`/pos?tableId=${table.id}`}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Settle / pending
                     </Link>
                     {latestOrder ? (
                       <Link
-                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[var(--color-border)] px-3 text-sm font-black text-stone-950 transition hover:bg-stone-50"
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[var(--color-border)] px-3 text-sm font-black text-stone-950 transition hover:bg-stone-50 sm:col-span-2"
                         href={`/invoices/customer/${latestOrder.id}`}
                       >
                         Print Invoice
@@ -200,7 +210,7 @@ export default async function Home() {
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-black">Completed / Paid Bills</h2>
+          <h2 className="text-lg font-black">Today completed / paid bills</h2>
           <div className="flex gap-2">
             <button className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-white px-4 text-sm font-semibold text-stone-800" type="button">
               <CalendarClock className="h-4 w-4" />

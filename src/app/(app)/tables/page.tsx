@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { differenceInMinutes } from "date-fns";
-import { Plus, ReceiptText, Table2 } from "lucide-react";
+import { CreditCard, Edit3, Plus, ReceiptText, Table2 } from "lucide-react";
 
 import { SubmitButton } from "@/components/form-controls";
 import { ButtonLink, EmptyState, PageHeader, StatCard, StatusBadge } from "@/components/ui";
@@ -45,10 +45,10 @@ export default async function TablesPage({
     <div className="app-page text-stone-950">
       <div className="grid gap-4">
         <PageHeader
-          eyebrow="Tables"
-          title="Active tables"
-          subtitle={`Business day ${businessDay.businessDate.toLocaleDateString("en-AE")} · ${businessDay.status}`}
-          action={<ButtonLink href="/tables/new"><Plus className="h-4 w-4" />Add New Table</ButtonLink>}
+          eyebrow="Billing"
+          title="Active tables and pending bills"
+          subtitle={`Create tables, add or edit orders, settle bills, or keep unpaid bills pending by waitress. Business day ${businessDay.businessDate.toLocaleDateString("en-AE")} · ${businessDay.status}`}
+          action={<ButtonLink href="/tables/new"><Plus className="h-4 w-4" />Create New Table</ButtonLink>}
         />
 
         <section className="grid gap-3 sm:grid-cols-3">
@@ -104,12 +104,17 @@ export default async function TablesPage({
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {table.status === "OPEN" ? (
-                    <Link className="rounded-lg bg-stone-950 px-3 py-2 text-center text-sm font-black text-white transition hover:bg-stone-800" href={`/pos?tableId=${table.id}`}>
-                      Continue Billing
+                    <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-stone-950 px-3 py-2 text-center text-sm font-black text-white transition hover:bg-stone-800" href={`/pos?tableId=${table.id}`}>
+                      <Edit3 className="h-4 w-4" />
+                      Add / edit order
                     </Link>
                   ) : null}
+                  <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-center text-sm font-black text-stone-950 transition hover:bg-stone-50" href={`/pos?tableId=${table.id}`}>
+                    <CreditCard className="h-4 w-4" />
+                    Settle / pending
+                  </Link>
                   {latestOrder ? (
-                    <Link className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-center text-sm font-black text-stone-950 transition hover:bg-stone-50" href={`/invoices/customer/${latestOrder.id}`}>
+                    <Link className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-center text-sm font-black text-stone-950 transition hover:bg-stone-50 sm:col-span-2" href={`/invoices/customer/${latestOrder.id}`}>
                       Print Invoice
                     </Link>
                   ) : null}

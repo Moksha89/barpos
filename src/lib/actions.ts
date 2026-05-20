@@ -1,5 +1,7 @@
 "use server";
 
+import { hash } from "bcryptjs";
+
 import {
   AuditAction,
   BusinessDayStatus,
@@ -158,6 +160,36 @@ export async function createItem(formData: FormData) {
   revalidatePath("/admin/products");
 }
 
+export async function createInventoryPurchase(formData: FormData) {
+  await requirePermission("products.manage");
+  const itemId = formString(formData, "itemId");
+  const quantity = formNumber(formData, "quantity");
+  const unitCostCents = toCents(formNumber(formData, "unitCost"));
+  const totalCostCents = Math.round(unitCostCents * quantity);
+  const notes = formOptionalString(formData, "notes") ?? "Inventory added";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.item.update({
+      where: { id: itemId },
+      data: { stockQuantity: { increment: quantity } },
+    });
+    await tx.inventoryTransaction.create({
+      data: {
+        itemId,
+        type: "PURCHASE",
+        quantityChange: quantity,
+        unitCostCents,
+        totalCostCents,
+        notes,
+      },
+    });
+  });
+
+  await audit(AuditAction.SETTINGS_UPDATED, "InventoryTransaction", itemId);
+  revalidatePath("/admin/products");
+  revalidatePath("/reports");
+}
+
 export async function createOffer(formData: FormData) {
   await requirePermission("offers.manage");
   const offer = await prisma.offer.create({
@@ -218,6 +250,24 @@ export async function createStaff(formData: FormData) {
   });
   await audit(AuditAction.SETTINGS_UPDATED, "Staff", staff.id);
   revalidatePath("/admin/staff");
+  revalidatePath("/admin/settings");
+  revalidatePath("/reports");
+}
+
+export async function updateUserPassword(formData: FormData) {
+  await requirePermission("settings.manage");
+  const userId = formString(formData, "userId");
+  const password = formString(formData, "password");
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hash(password, 12) },
+  });
+  await audit(AuditAction.SETTINGS_UPDATED, "User", userId);
+  revalidatePath("/admin/settings");
 }
 
 export async function createCommissionRule(formData: FormData) {
@@ -339,6 +389,7 @@ export async function createExpense(formData: FormData) {
   await audit(AuditAction.EXPENSE_CREATED, "Expense", expense.id);
   revalidatePath("/expenses");
   revalidatePath("/reports");
+  revalidatePath("/admin/settings");
 }
 
 type PosOrderLine = {
@@ -765,6 +816,7 @@ export async function createStaffAdvance(formData: FormData) {
 
   await audit(AuditAction.ADVANCE_GIVEN, "StaffAdvance", advance.id);
   revalidatePath("/settlements");
+  revalidatePath("/reports");
 }
 
 export async function createStaffSettlement(formData: FormData) {
@@ -928,5 +980,6 @@ export async function createStaffSettlement(formData: FormData) {
 
   await audit(AuditAction.COMMISSION_PAID, "StaffSettlement", settlement.id);
   revalidatePath("/settlements");
+  revalidatePath("/reports");
   revalidatePath(`/invoices/settlement/${settlement.id}`);
 }

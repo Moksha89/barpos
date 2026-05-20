@@ -8,18 +8,20 @@ import {
 import {
   createExpenseCategory,
   createPaymentMethod,
+  createStaff,
   updateInvoiceSettings,
   updatePrinterSettings,
+  updateUserPassword,
 } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { PaymentMode } from "@prisma/client";
+import { StaffRole, PaymentMode } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   await requirePermission("settings.manage");
-  const [invoiceSetting, printerSetting, expenseCategories, roles, paymentMethods] =
+  const [invoiceSetting, printerSetting, expenseCategories, roles, paymentMethods, staff, users] =
     await Promise.all([
       prisma.invoiceSetting.findFirst(),
       prisma.printerSetting.findFirst(),
@@ -31,6 +33,8 @@ export default async function SettingsPage() {
       prisma.paymentMethod.findMany({
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
+      prisma.staff.findMany({ orderBy: { name: "asc" } }),
+      prisma.user.findMany({ include: { role: true }, orderBy: { name: "asc" } }),
     ]);
 
   return (
@@ -38,14 +42,83 @@ export default async function SettingsPage() {
       <div className="grid gap-4">
         <header>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-gold-dark)]">
-            Admin
+            Settings
           </p>
-          <h1 className="mt-2 text-2xl font-black">System Settings</h1>
+          <h1 className="mt-2 text-2xl font-black">Settings</h1>
           <p className="mt-2 text-stone-600">
-            Manage invoice format, printer settings, expense categories, roles,
-            permissions, and business defaults.
+            Manage passwords, employees, receipt settings and business defaults from one clean module.
           </p>
         </header>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <AdminCard title="Manage Password">
+            <form action={updateUserPassword} className="grid gap-3">
+              <Field label="User">
+                <select className="min-h-10 rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm font-semibold" name="userId" required>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>{user.name} · {user.role.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="New password">
+                <TextInput name="password" type="password" minLength={6} required />
+              </Field>
+              <SubmitButton>Update password</SubmitButton>
+            </form>
+          </AdminCard>
+
+          <AdminCard title="Create Employee">
+            <form action={createStaff} className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Name">
+                  <TextInput name="name" placeholder="Waitress name" required />
+                </Field>
+                <Field label="Role">
+                  <select className="min-h-10 rounded-xl border border-[var(--color-border)] bg-white px-3 text-sm font-semibold" name="role" required>
+                    {Object.values(StaffRole).map((role) => (
+                      <option key={role} value={role}>{role.replaceAll("_", " ")}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Phone">
+                  <TextInput name="phone" />
+                </Field>
+                <Field label="Fixed salary">
+                  <TextInput name="fixedSalary" type="number" min="0" step="0.01" defaultValue="0" />
+                </Field>
+                <Field label="Normal %">
+                  <TextInput name="normalCommissionPercent" type="number" min="0" step="0.01" defaultValue="0" />
+                </Field>
+                <Field label="Special drink %">
+                  <TextInput name="specialCommissionPercent" type="number" min="0" step="0.01" defaultValue="0" />
+                </Field>
+              </div>
+              <Checkbox name="active" label="Active" />
+              <SubmitButton>Create employee</SubmitButton>
+            </form>
+          </AdminCard>
+        </div>
+
+        <AdminCard title="Manage Employees" eyebrow={`${staff.length} employees`}>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {staff.map((member) => (
+              <article className="rounded-2xl border border-[var(--color-border)] bg-stone-50 p-4" key={member.id}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-black">{member.name}</h2>
+                    <p className="text-xs font-bold text-stone-500">{member.role.replaceAll("_", " ")} · {member.phone ?? "No phone"}</p>
+                  </div>
+                  <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black text-stone-700">{member.active ? "Active" : "Inactive"}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                  <div><p className="text-xs text-stone-500">Salary</p><b>AED {(member.fixedSalaryCents / 100).toLocaleString("en-AE")}</b></div>
+                  <div><p className="text-xs text-stone-500">Normal</p><b>{member.normalCommissionPercent}%</b></div>
+                  <div><p className="text-xs text-stone-500">Special</p><b>{member.specialCommissionPercent}%</b></div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </AdminCard>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <AdminCard title="Invoice Format">
