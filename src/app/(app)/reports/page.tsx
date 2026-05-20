@@ -149,9 +149,10 @@ export default async function ReportsPage({
         </header>
 
         <nav className="flex gap-2 overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-sm">
-          <a className="shrink-0 rounded-full bg-stone-950 px-3 py-2 text-xs font-black text-white" href="#sales-history">Total sales</a>
+          <a className="shrink-0 rounded-full bg-stone-950 px-3 py-2 text-xs font-black text-white" href="#total-sales">Total sales</a>
           <a className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-black text-stone-700 hover:bg-amber-50" href="#total-commissions">Total commissions</a>
           <a className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-black text-stone-700 hover:bg-amber-50" href="#total-expenses">Total expenses</a>
+          <a className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-black text-stone-700 hover:bg-amber-50" href="#profit-loss">P/L</a>
         </nav>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -163,112 +164,111 @@ export default async function ReportsPage({
           <StatCard accent="dark" label="Bills" value={orderSummary.totalBills} />
         </section>
 
-        <div className="grid gap-3 xl:grid-cols-2">
-          <AdminCard title="Sales history" eyebrow={`${daily.length} days`}>
-            <div id="sales-history" />
-            <TableShell>
-              <table className="premium-table min-w-[760px] text-left">
-                <thead>
-                  <tr>
-                    <th>Date</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th><th className="currency-cell">Tips</th><th className="currency-cell">Expenses</th><th className="currency-cell">P/L</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {daily.map((row) => (
-                    <tr key={row.date}>
-                      <td className="font-bold">{row.date}</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td><td className="currency-cell">{formatCurrency(row.expenses)}</td><td className="currency-cell font-black">{formatCurrency(row.profit)}</td>
+        <div className="report-tabs grid gap-3">
+          <section className="report-tab-panel grid gap-3" id="total-sales">
+            <AdminCard title="Sales history" eyebrow={`${daily.length} days`}>
+              <TableShell>
+                <table className="premium-table min-w-[760px] text-left">
+                  <thead>
+                    <tr>
+                      <th>Date</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th><th className="currency-cell">Tips</th><th className="currency-cell">Expenses</th><th className="currency-cell">P/L</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableShell>
-          </AdminCard>
-
-          <AdminCard title="Profit / Loss summary">
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between"><span>Total sales</span><b>{formatCurrency(orderSummary.netSalesCents)}</b></div>
-              <div className="flex justify-between"><span>Inventory cost</span><b>{formatCurrency(orderSummary.inventoryCostCents)}</b></div>
-              <div className="flex justify-between"><span>Total commission</span><b>{formatCurrency(totalCommissionCents)}</b></div>
-              <div className="flex justify-between"><span>Total tips</span><b>{formatCurrency(orderSummary.tipsCents)}</b></div>
-              <div className="flex justify-between"><span>Total expenses</span><b>{formatCurrency(expenseCents)}</b></div>
-              <div className="flex justify-between border-t pt-2 text-base"><span>P/L after commission + expenses</span><b>{formatCurrency(netProfitCents)}</b></div>
+                  </thead>
+                  <tbody>
+                    {daily.map((row) => (
+                      <tr key={row.date}>
+                        <td className="font-bold">{row.date}</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td><td className="currency-cell">{formatCurrency(row.expenses)}</td><td className="currency-cell font-black">{formatCurrency(row.profit)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableShell>
+            </AdminCard>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <AdminCard title="Payment modes">
+                <Breakdown rows={[...paymentBreakdown.entries()]} />
+              </AdminCard>
+              <AdminCard title="Top waitress by sales">
+                <Ranking rows={topBySales} valueKey="sales" />
+              </AdminCard>
             </div>
-          </AdminCard>
-        </div>
+          </section>
 
-        <div className="grid gap-3 lg:grid-cols-2">
-          <AdminCard title="Top waitress by commission">
-            <Ranking rows={topByCommission} valueKey="commission" />
-          </AdminCard>
-          <AdminCard title="Top waitress by sales">
-            <Ranking rows={topBySales} valueKey="sales" />
-          </AdminCard>
-        </div>
-
-        <AdminCard title="Waitress commission cards" eyebrow="Click name for tables, tips, advances and payouts">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {staffRows.sort((a, b) => b.commission - a.commission).map((row) => (
-              <Link className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md" href={`/reports/staff/${row.id}?startDate=${range.startDate}&endDate=${range.endDate}`} key={row.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-black">{row.name}</p>
-                    <p className="mt-1 text-xs font-bold text-stone-500">Normal {row.normalPercent}% · Special {row.specialPercent}%</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-[var(--color-gold-dark)]" />
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <MiniMetric label="Sales" value={formatCurrency(row.sales)} />
-                  <MiniMetric label="Commission" value={formatCurrency(row.commission)} />
-                  <MiniMetric label="Tips" value={formatCurrency(row.tips)} />
-                  <MiniMetric label="Advances" value={formatCurrency(row.advances)} />
-                  <MiniMetric label="Payouts" value={formatCurrency(row.payouts)} />
-                  <MiniMetric label="Bills" value={row.bills.toString()} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </AdminCard>
-
-        <div className="grid gap-3 lg:grid-cols-2">
-          <AdminCard title="Payment modes">
-            <Breakdown rows={[...paymentBreakdown.entries()]} />
-          </AdminCard>
-          <AdminCard title="Total expenses" eyebrow={`${expenses.length} rows`}>
-            <div id="total-expenses" />
-            <Breakdown rows={[...expenseBreakdown.entries()]} />
-          </AdminCard>
-        </div>
-
-        <AdminCard title="Total commissions" eyebrow={`${staffRows.length} staff`}>
-          <div id="total-commissions" />
-          <TableShell>
-            <table className="premium-table min-w-[760px] text-left">
-              <thead><tr><th>Waitress</th><th>%</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th><th className="currency-cell">Tips</th><th className="currency-cell">Advances</th><th className="currency-cell">Payouts</th></tr></thead>
-              <tbody>
+          <section className="report-tab-panel grid gap-3" id="total-commissions">
+            <div className="grid gap-3 lg:grid-cols-2">
+              <AdminCard title="Top waitress by commission">
+                <Ranking rows={topByCommission} valueKey="commission" />
+              </AdminCard>
+              <AdminCard title="Tips" eyebrow={`${tips.length} tips`}>
+                <ListRows rows={tips.map((tip) => [tip.staff.name, `${tip.order.billNumber} · ${formatCurrency(tip.amountCents)} · ${tip.paymentMode}`])} />
+              </AdminCard>
+            </div>
+            <AdminCard title="Waitress commission cards" eyebrow="Click name for tables, tips, advances and payouts">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {staffRows.sort((a, b) => b.commission - a.commission).map((row) => (
-                  <tr key={row.id}><td className="font-bold"><Link className="hover:text-[var(--color-gold-dark)]" href={`/reports/staff/${row.id}?startDate=${range.startDate}&endDate=${range.endDate}`}>{row.name}</Link></td><td>{row.normalPercent}% / {row.specialPercent}%</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell font-black">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td><td className="currency-cell">{formatCurrency(row.advances)}</td><td className="currency-cell">{formatCurrency(row.payouts)}</td></tr>
+                  <Link className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md" href={`/reports/staff/${row.id}?startDate=${range.startDate}&endDate=${range.endDate}`} key={row.id}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-black">{row.name}</p>
+                        <p className="mt-1 text-xs font-bold text-stone-500">Normal {row.normalPercent}% · Special {row.specialPercent}%</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-[var(--color-gold-dark)]" />
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <MiniMetric label="Sales" value={formatCurrency(row.sales)} />
+                      <MiniMetric label="Commission" value={formatCurrency(row.commission)} />
+                      <MiniMetric label="Tips" value={formatCurrency(row.tips)} />
+                      <MiniMetric label="Advances" value={formatCurrency(row.advances)} />
+                      <MiniMetric label="Payouts" value={formatCurrency(row.payouts)} />
+                      <MiniMetric label="Bills" value={row.bills.toString()} />
+                    </div>
+                  </Link>
                 ))}
-              </tbody>
-            </table>
-          </TableShell>
-        </AdminCard>
+              </div>
+            </AdminCard>
+            <AdminCard title="Total commissions" eyebrow={`${staffRows.length} staff`}>
+              <TableShell>
+                <table className="premium-table min-w-[760px] text-left">
+                  <thead><tr><th>Waitress</th><th>%</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th><th className="currency-cell">Tips</th><th className="currency-cell">Advances</th><th className="currency-cell">Payouts</th></tr></thead>
+                  <tbody>
+                    {staffRows.sort((a, b) => b.commission - a.commission).map((row) => (
+                      <tr key={row.id}><td className="font-bold"><Link className="hover:text-[var(--color-gold-dark)]" href={`/reports/staff/${row.id}?startDate=${range.startDate}&endDate=${range.endDate}`}>{row.name}</Link></td><td>{row.normalPercent}% / {row.specialPercent}%</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell font-black">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td><td className="currency-cell">{formatCurrency(row.advances)}</td><td className="currency-cell">{formatCurrency(row.payouts)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableShell>
+            </AdminCard>
+          </section>
 
-        <div className="grid gap-3 lg:grid-cols-2">
-          <AdminCard title="Tips" eyebrow={`${tips.length} tips`}>
-            <ListRows rows={tips.map((tip) => [tip.staff.name, `${tip.order.billNumber} · ${formatCurrency(tip.amountCents)} · ${tip.paymentMode}`])} />
-          </AdminCard>
-          <AdminCard title="Expense rows" eyebrow={`${expenses.length} expenses`}>
-            <ListRows rows={expenses.slice(0, 80).map((expense) => [expense.category.name, `${formatCurrency(expense.amountCents)} · ${expense.paymentMode} · ${expense.paidTo}`])} />
-          </AdminCard>
-        </div>
+          <section className="report-tab-panel grid gap-3" id="total-expenses">
+            <AdminCard title="Total expenses" eyebrow={`${expenses.length} rows`}>
+              <Breakdown rows={[...expenseBreakdown.entries()]} />
+            </AdminCard>
+            <AdminCard title="Expense rows" eyebrow={`${expenses.length} expenses`}>
+              <ListRows rows={expenses.slice(0, 80).map((expense) => [expense.category.name, `${formatCurrency(expense.amountCents)} · ${expense.paymentMode} · ${expense.paidTo}`])} />
+            </AdminCard>
+          </section>
 
-        <div className="grid gap-3 lg:grid-cols-2">
-          <AdminCard title="Inventory cost" eyebrow={`${inventoryTransactions.length} transactions`}>
-            <ListRows rows={inventoryTransactions.slice(0, 80).map((transaction) => [transaction.item.name, `Qty ${Math.abs(transaction.quantityChange)} · Cost ${formatCurrency(transaction.totalCostCents)} · ${transaction.type}`])} />
-          </AdminCard>
-          <AdminCard title="Complimentary report" eyebrow={`${complimentaryItems.length} items`}>
-            <ListRows rows={complimentaryItems.slice(0, 80).map((line) => [line.item.name, `${line.order.staff.name} · ${line.order.billNumber} · ${line.complimentaryReason ?? line.offer?.name ?? "Offer"}`])} />
-          </AdminCard>
+          <section className="report-tab-panel grid gap-3" id="profit-loss">
+            <AdminCard title="Profit / Loss summary">
+              <div className="grid gap-2 text-sm">
+                <div className="flex justify-between"><span>Total sales</span><b>{formatCurrency(orderSummary.netSalesCents)}</b></div>
+                <div className="flex justify-between"><span>Inventory cost</span><b>{formatCurrency(orderSummary.inventoryCostCents)}</b></div>
+                <div className="flex justify-between"><span>Total commission</span><b>{formatCurrency(totalCommissionCents)}</b></div>
+                <div className="flex justify-between"><span>Total tips</span><b>{formatCurrency(orderSummary.tipsCents)}</b></div>
+                <div className="flex justify-between"><span>Total expenses</span><b>{formatCurrency(expenseCents)}</b></div>
+                <div className="flex justify-between border-t pt-2 text-base"><span>P/L after commission + expenses</span><b>{formatCurrency(netProfitCents)}</b></div>
+              </div>
+            </AdminCard>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <AdminCard title="Inventory cost" eyebrow={`${inventoryTransactions.length} transactions`}>
+                <ListRows rows={inventoryTransactions.slice(0, 80).map((transaction) => [transaction.item.name, `Qty ${Math.abs(transaction.quantityChange)} · Cost ${formatCurrency(transaction.totalCostCents)} · ${transaction.type}`])} />
+              </AdminCard>
+              <AdminCard title="Complimentary report" eyebrow={`${complimentaryItems.length} items`}>
+                <ListRows rows={complimentaryItems.slice(0, 80).map((line) => [line.item.name, `${line.order.staff.name} · ${line.order.billNumber} · ${line.complimentaryReason ?? line.offer?.name ?? "Offer"}`])} />
+              </AdminCard>
+            </div>
+          </section>
         </div>
       </div>
     </div>
