@@ -7,17 +7,19 @@ import {
 } from "@/components/form-controls";
 import {
   createExpenseCategory,
+  createPaymentMethod,
   updateInvoiceSettings,
   updatePrinterSettings,
 } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { PaymentMode } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   await requirePermission("settings.manage");
-  const [invoiceSetting, printerSetting, expenseCategories, roles] =
+  const [invoiceSetting, printerSetting, expenseCategories, roles, paymentMethods] =
     await Promise.all([
       prisma.invoiceSetting.findFirst(),
       prisma.printerSetting.findFirst(),
@@ -25,6 +27,9 @@ export default async function SettingsPage() {
       prisma.role.findMany({
         include: { permissions: { include: { permission: true } } },
         orderBy: { label: "asc" },
+      }),
+      prisma.paymentMethod.findMany({
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
     ]);
 
@@ -83,6 +88,27 @@ export default async function SettingsPage() {
             </form>
           </AdminCard>
         </div>
+
+        <AdminCard title="Payment Modes">
+          <form action={createPaymentMethod} className="mb-4 grid gap-3 md:grid-cols-[1fr_150px_120px_auto_auto]">
+            <TextInput name="name" placeholder="Card Machine 4 / UPI India" required />
+            <select className="min-h-11 rounded-2xl border border-stone-200 bg-white px-3 text-sm font-semibold" name="mode" defaultValue={PaymentMode.CARD}>
+              {Object.values(PaymentMode).map((mode) => (
+                <option key={mode} value={mode}>{mode}</option>
+              ))}
+            </select>
+            <TextInput name="sortOrder" placeholder="Sort" type="number" />
+            <Checkbox name="active" label="Active" />
+            <SubmitButton>Add mode</SubmitButton>
+          </form>
+          <div className="flex flex-wrap gap-2">
+            {paymentMethods.map((method) => (
+              <span key={method.id} className="rounded-full bg-stone-100 px-3 py-1 text-sm font-semibold">
+                {method.name} · {method.mode}{method.active ? "" : " · inactive"}
+              </span>
+            ))}
+          </div>
+        </AdminCard>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <AdminCard title="Expense Categories">

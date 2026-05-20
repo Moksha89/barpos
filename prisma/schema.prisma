@@ -27,6 +27,7 @@ enum StaffRole {
 
 enum OrderStatus {
   DRAFT
+  PENDING
   PAID
   VOID
   CANCELLED
@@ -344,6 +345,7 @@ model Order {
   updatedAt                DateTime     @updatedAt
 
   @@index([staffId])
+  @@index([tableId, status])
   @@index([status, createdAt])
 }
 
@@ -372,9 +374,23 @@ model Payment {
   orderId         String
   order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
   mode            PaymentMode
+  paymentMethodId String?
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   amountCents     Int
   reference       String?
   createdAt       DateTime    @default(now())
+}
+
+model PaymentMethod {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  mode        PaymentMode
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  payments    Payment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Tip {

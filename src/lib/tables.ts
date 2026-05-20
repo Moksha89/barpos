@@ -6,26 +6,27 @@ export function businessDateStart(date = new Date()) {
   return start;
 }
 
-export async function getOrOpenBusinessDay() {
+export async function getBusinessDay() {
   const businessDate = businessDateStart();
   const existing = await prisma.businessDay.findUnique({
     where: { businessDate },
   });
 
-  if (existing?.status === "OPEN") {
+  if (existing) {
     return existing;
-  }
-
-  if (existing?.status === "CLOSED") {
-    return prisma.businessDay.update({
-      where: { id: existing.id },
-      data: { status: "OPEN", closedAt: null },
-    });
   }
 
   return prisma.businessDay.create({
     data: { businessDate, status: "OPEN" },
   });
+}
+
+export async function getOrOpenBusinessDay() {
+  const businessDay = await getBusinessDay();
+  if (businessDay.status !== "OPEN") {
+    throw new Error("Business day is closed. Reopen the day before creating tables.");
+  }
+  return businessDay;
 }
 
 export async function nextTableNumber(businessDayId: string) {
@@ -37,7 +38,7 @@ export async function nextTableNumber(businessDayId: string) {
 }
 
 export async function getActiveTableCards() {
-  const businessDay = await getOrOpenBusinessDay();
+  const businessDay = await getBusinessDay();
   const tables = await prisma.barTable.findMany({
     where: { businessDayId: businessDay.id },
     include: {

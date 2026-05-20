@@ -82,11 +82,14 @@ export default async function CustomerInvoiceDetailPage({
           <div className="flex justify-between"><span>Tax</span><b>{formatCurrency(order.taxCents)}</b></div>
           <div className="flex justify-between"><span>Net Bill</span><b>{formatCurrency(order.netSalesCents)}</b></div>
           <div className="flex justify-between"><span>Tip</span><b>{formatCurrency(order.tipCents)}</b></div>
-          <div className="flex justify-between border-t pt-2 text-base"><span>Total Paid</span><b>{formatCurrency(order.totalCollectedCents)}</b></div>
+          <div className="flex justify-between border-t pt-2 text-base">
+            <span>{order.status === "PENDING" ? "Pending Due" : "Total Paid"}</span>
+            <b>{formatCurrency(order.status === "PENDING" ? order.netSalesCents + order.tipCents : order.totalCollectedCents)}</b>
+          </div>
         </div>
 
         <p className="mt-4 text-sm">
-          Payment: {order.payments.map((payment) => `${payment.mode} ${formatCurrency(payment.amountCents)}`).join(" / ")}
+          Payment: {order.payments.length > 0 ? order.payments.map((payment) => `${payment.mode} ${formatCurrency(payment.amountCents)}`).join(" / ") : "Pending"}
         </p>
         <p className="mt-5 text-center text-sm font-bold">
           {invoiceSetting?.thankYouMessage ?? "Thank you. Visit again!"}

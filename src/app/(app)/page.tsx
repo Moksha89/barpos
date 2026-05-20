@@ -15,45 +15,54 @@ export default async function Home() {
   const settledTables = tables.filter((table) => table.status === "SETTLED");
   const todaySalesCents = tables.reduce(
     (total, table) =>
-      total + table.orders.reduce((orderTotal, order) => orderTotal + order.netSalesCents, 0),
+      total +
+      table.orders.reduce(
+        (orderTotal, order) =>
+          order.status === "PAID" ? orderTotal + order.netSalesCents : orderTotal,
+        0,
+      ),
     0,
   );
   const activeBillCents = openTables.reduce(
     (total, table) =>
-      total + table.orders.reduce((orderTotal, order) => orderTotal + order.netSalesCents, 0),
+      total +
+      table.orders.reduce(
+        (orderTotal, order) =>
+          order.status === "DRAFT" ? orderTotal + order.netSalesCents : orderTotal,
+        0,
+      ),
     0,
   );
 
   return (
     <div className="p-4 text-stone-950 sm:p-6">
-      <section className="rounded-3xl bg-stone-950 px-4 py-6 text-white sm:px-6">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-2xl bg-stone-950 px-4 py-4 text-white sm:px-5">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-amber-300">
               Active Tables
             </p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">
-              Daily table-based billing
+            <h1 className="mt-1 max-w-3xl text-2xl font-black tracking-tight sm:text-3xl">
+              Table billing dashboard
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-stone-300 sm:text-lg">
-              Open the business day in the morning, create tables from 1 onward,
-              settle each bill, and close remaining tables at night.
+            <p className="mt-1 max-w-2xl text-sm text-stone-300">
+              Save orders during dinner, reopen active tables, settle at the end, or keep unpaid bills pending by waitress.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <form action={openBusinessDay}>
-              <button className="min-h-12 rounded-2xl bg-white px-5 font-black text-stone-950" type="submit">
+              <button className="min-h-10 rounded-xl bg-white px-4 font-black text-stone-950" type="submit">
                 Open Day
               </button>
             </form>
             <form action={closeBusinessDay}>
-              <button className="min-h-12 rounded-2xl border border-white/20 px-5 font-black text-white" type="submit">
+              <button className="min-h-10 rounded-xl border border-white/20 px-4 font-black text-white" type="submit">
                 Close Day
               </button>
             </form>
             <Link
               href="/tables/new"
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-amber-400 px-6 py-3 text-base font-bold text-stone-950"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-amber-400 px-4 py-2 text-sm font-bold text-stone-950"
             >
               Add New Table
             </Link>
@@ -61,7 +70,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-4 px-4 py-6 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
+      <section className="mx-auto grid max-w-7xl gap-3 px-2 py-4 sm:grid-cols-2 sm:px-4 lg:grid-cols-4 lg:px-6">
         {[
           ["Day Status", businessDay.status, businessDay.businessDate.toLocaleDateString("en-AE")],
           ["Open Tables", String(openTables.length), "Currently billing"],
@@ -70,10 +79,10 @@ export default async function Home() {
         ].map(([label, value, note]) => (
           <article
             key={label}
-            className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm"
+            className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm"
           >
             <p className="text-sm font-medium text-stone-500">{label}</p>
-            <p className="mt-2 text-3xl font-black text-stone-950">
+            <p className="mt-1 text-2xl font-black text-stone-950">
               {value}
             </p>
             <p className="mt-2 text-sm text-stone-500">{note}</p>
@@ -81,10 +90,10 @@ export default async function Home() {
         ))}
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-4 pb-10 sm:px-6 lg:px-8">
+      <section className="mx-auto grid max-w-7xl gap-4 px-2 pb-8 sm:px-4 lg:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-black">Open tables</h2>
+            <h2 className="text-xl font-black">Open tables</h2>
             <p className="text-sm text-stone-600">Cards stay active until the table bill is settled.</p>
           </div>
           <Link className="rounded-2xl bg-stone-950 px-4 py-3 text-center text-sm font-black text-white" href="/tables">
@@ -109,25 +118,21 @@ export default async function Home() {
                 0,
               );
               return (
-                <article key={table.id} className="rounded-3xl bg-white p-5 shadow-sm">
+                <article key={table.id} className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
                         Table {table.tableNumber}
                       </p>
-                      <h3 className="mt-1 text-2xl font-black">{table.tableName}</h3>
+                      <h3 className="mt-1 text-xl font-black">{table.tableName}</h3>
                     </div>
-                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-700">
-                      {table.status}
-                    </span>
+                    <b className="text-lg text-amber-700">{formatCurrency(billAmount)}</b>
                   </div>
-                  <div className="mt-4 grid gap-2 text-sm text-stone-600">
-                    <p><b>Customer:</b> {table.customerName || "Walk-in"}</p>
-                    <p><b>Staff:</b> {table.staff.name}</p>
-                    <p><b>Guests:</b> {table.guestCount ?? "-"}</p>
-                    <p><b>Open time:</b> {minutes < 1 ? "Just opened" : `${minutes} min`}</p>
-                    <p><b>Payment:</b> Unpaid / active</p>
-                    <p><b>Bill amount:</b> {formatCurrency(billAmount)}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-stone-600">
+                    <p><b>Customer</b><br />{table.customerName || "Walk-in"}</p>
+                    <p><b>Waitress</b><br />{table.staff.name}</p>
+                    <p><b>Guests</b><br />{table.guestCount ?? "-"}</p>
+                    <p><b>Open</b><br />{minutes < 1 ? "Just opened" : `${minutes} min`}</p>
                   </div>
                   <Link
                     className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-stone-950 font-black text-white"

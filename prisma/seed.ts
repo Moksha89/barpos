@@ -451,6 +451,30 @@ async function main() {
     });
   }
 
+  const paymentMethods = [
+    { name: "Cash Counter", code: "CASH_COUNTER", mode: "CASH" as const, sortOrder: 1 },
+    { name: "Card Machine 1", code: "CARD_MACHINE_1", mode: "CARD" as const, sortOrder: 2 },
+    { name: "Card Machine 2", code: "CARD_MACHINE_2", mode: "CARD" as const, sortOrder: 3 },
+    { name: "Card Machine 3", code: "CARD_MACHINE_3", mode: "CARD" as const, sortOrder: 4 },
+    { name: "UPI India", code: "UPI_INDIA", mode: "UPI" as const, sortOrder: 5 },
+    { name: "Online Transfer", code: "ONLINE_TRANSFER", mode: "ONLINE" as const, sortOrder: 6 },
+  ];
+  for (const method of paymentMethods) {
+    await prisma.paymentMethod.upsert({
+      where: { code: method.code },
+      update: {
+        name: method.name,
+        mode: method.mode,
+        active: true,
+        sortOrder: method.sortOrder,
+      },
+      create: {
+        ...method,
+        active: true,
+      },
+    });
+  }
+
   const invoiceSetting = await prisma.invoiceSetting.findFirst();
   if (!invoiceSetting) {
     await prisma.invoiceSetting.create({

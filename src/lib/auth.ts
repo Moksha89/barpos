@@ -3,9 +3,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/db";
+import { SESSION_COOKIE_NAME } from "@/lib/session";
 
-const sessionCookieName = "barpos_user_id";
-export const SESSION_COOKIE_NAME = sessionCookieName;
+const sessionCookieName = SESSION_COOKIE_NAME;
 
 function shouldSetSecureSessionCookie() {
   if (process.env.BARPOS_SECURE_COOKIES) {

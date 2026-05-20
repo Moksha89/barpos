@@ -4,6 +4,7 @@ import {
   AuditAction,
   BusinessDayStatus,
   LedgerEntryType,
+  OrderStatus,
   PaymentMode,
   StaffRole,
   TableStatus,
@@ -21,7 +22,7 @@ import { toCents } from "@/lib/money";
 import { calculateCommission } from "@/lib/commission";
 import { prisma } from "@/lib/db";
 import { hasPermission, requirePermission, signIn, signOut } from "@/lib/auth";
-import { getOrOpenBusinessDay, nextTableNumber } from "@/lib/tables";
+import { businessDateStart, getOrOpenBusinessDay, nextTableNumber } from "@/lib/tables";
 
 async function audit(action: AuditAction, entityType: string, entityId?: string) {
   await prisma.auditLog.create({
@@ -78,14 +79,24 @@ export async function createTable(formData: FormData) {
 
 export async function openBusinessDay() {
   await requirePermission("pos.create");
-  await getOrOpenBusinessDay();
+  const businessDate = businessDateStart();
+  await prisma.businessDay.upsert({
+    where: { businessDate },
+    update: { status: BusinessDayStatus.OPEN, closedAt: null },
+    create: { businessDate, status: BusinessDayStatus.OPEN },
+  });
   revalidatePath("/");
   revalidatePath("/tables");
 }
 
 export async function closeBusinessDay() {
   const user = await requirePermission("pos.create");
-  const businessDay = await getOrOpenBusinessDay();
+  const businessDay = await prisma.businessDay.findUnique({
+    where: { businessDate: businessDateStart() },
+  });
+  if (!businessDay) {
+    return;
+  }
   await prisma.$transaction(async (tx) => {
     await tx.barTable.updateMany({
       where: { businessDayId: businessDay.id, status: TableStatus.OPEN },
@@ -93,14 +104,14 @@ export async function closeBusinessDay() {
         status: TableStatus.VOID,
         closedAt: new Date(),
         closedByUserId: user.id,
-      },
+      }
     });
     await tx.businessDay.update({
       where: { id: businessDay.id },
       data: {
         status: BusinessDayStatus.CLOSED,
         closedAt: new Date(),
-      },
+      }
     });
   });
   revalidatePath("/");
@@ -259,6 +270,22 @@ export async function createExpenseCategory(formData: FormData) {
   revalidatePath("/admin/settings");
 }
 
+export async function createPaymentMethod(formData: FormData) {
+  await requirePermission("settings.manage");
+  const name = formString(formData, "name");
+  const method = await prisma.paymentMethod.create({
+    data: {
+      name,
+      code: name.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, ""),
+      mode: formString(formData, "mode") as PaymentMode,
+      sortOrder: formNumber(formData, "sortOrder"),
+      active: formBoolean(formData, "active"),
+    },
+  });
+  await audit(AuditAction.SETTINGS_UPDATED, "PaymentMethod", method.id);
+  revalidatePath("/admin/settings");
+}
+
 export async function updateInvoiceSettings(formData: FormData) {
   await requirePermission("settings.manage");
   const id = formOptionalString(formData, "id");
@@ -324,11 +351,13 @@ type PosOrderLine = {
 
 type PosPaymentLine = {
   mode: PaymentMode;
+  paymentMethodId?: string | null;
   amount: number;
   reference?: string | null;
 };
 
 type PosOrderPayload = {
+  action?: "SAVE" | "SETTLE" | "PENDING";
   tableId?: string | null;
   tableNumber?: string | null;
   customerName?: string | null;
@@ -345,20 +374,21 @@ function parsePosOrderPayload(formData: FormData): PosOrderPayload {
   return parsed;
 }
 
-async function nextBillNumber() {
-  const count = await prisma.order.count();
-  return `BILL-${String(count + 1).padStart(6, "0")}`;
+function nextBillNumber() {
+  const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `BILL-${stamp}-${suffix}`;
 }
 
 export async function createPosOrder(formData: FormData) {
   const user = await requirePermission("pos.create");
   const payload = parsePosOrderPayload(formData);
+  const action = payload.action ?? "SETTLE";
   if (!hasPermission(user, "pos.discount") && Number(payload.discount) > 0) {
     throw new Error("Discount permission required");
   }
   const discountCents = toCents(payload.discount);
   const tipCents = toCents(payload.tip);
-  const billNumber = await nextBillNumber();
 
   const order = await prisma.$transaction(async (tx) => {
     let table: {
@@ -372,6 +402,7 @@ export async function createPosOrder(formData: FormData) {
     let businessDayId: string | null = null;
     let tableNumber = payload.tableNumber ?? null;
     let customerName = payload.customerName ?? null;
+    let draftOrder: { id: string; status: OrderStatus; billNumber: string } | null = null;
 
     if (payload.tableId) {
       table = await tx.barTable.findUnique({
@@ -391,6 +422,14 @@ export async function createPosOrder(formData: FormData) {
       businessDayId = table.businessDayId;
       tableNumber = table.tableName;
       customerName = table.customerName;
+      draftOrder = await tx.order.findFirst({
+        where: {
+          tableId: table.id,
+          status: { in: [OrderStatus.DRAFT, OrderStatus.PENDING] },
+        },
+        select: { id: true, status: true, billNumber: true },
+        orderBy: { createdAt: "desc" },
+      });
     }
 
     const staff = await tx.staff.findUniqueOrThrow({
@@ -475,57 +514,118 @@ export async function createPosOrder(formData: FormData) {
       (total, payment) => total + toCents(payment.amount),
       0,
     );
+    const isSettlement = action === "SETTLE";
+    const isPending = action === "PENDING";
 
-    if (paymentAmountCents !== netSalesCents + tipCents) {
+    if (isSettlement && paymentAmountCents !== netSalesCents + tipCents) {
       throw new Error("Payment amount must match net sales plus tip");
     }
+    if (!isSettlement && paymentAmountCents > 0) {
+      throw new Error("Save-to-table cannot include payment");
+    }
+    if (!isSettlement && tipCents > 0) {
+      throw new Error("Tips are collected during settlement");
+    }
 
-    const createdOrder = await tx.order.create({
-      data: {
-        billNumber,
-        businessDayId,
-        tableId: table?.id ?? null,
-        tableNumber,
-        customerName,
-        staffId: table?.staffId ?? payload.staffId,
-        cashierId: user.id,
-        status: "PAID",
-        subtotalCents,
-        discountCents: cappedDiscountCents,
-        taxCents,
-        netSalesCents,
-        tipCents,
-        totalCollectedCents: netSalesCents + tipCents,
-        complimentaryValueCents,
-        inventoryCostCents,
-        normalCommissionSalesCents: commission.normalEligibleSalesCents,
-        specialCommissionSalesCents: commission.specialDrinkSalesCents,
-        normalCommissionCents: commission.normalCommissionCents,
-        specialCommissionCents: commission.specialCommissionCents,
-        totalCommissionCents: commission.totalCommissionCents,
-        paidAt: new Date(),
-        items: { create: orderItems },
-        payments: {
-          create: payload.payments.map((payment) => ({
-            mode: payment.mode,
+    const paymentMethodIds = payload.payments
+      .map((payment) => payment.paymentMethodId)
+      .filter((id): id is string => Boolean(id));
+    const paymentMethods =
+      paymentMethodIds.length > 0
+        ? await tx.paymentMethod.findMany({
+            where: { id: { in: paymentMethodIds }, active: true },
+          })
+        : [];
+    const methodById = new Map(paymentMethods.map((method) => [method.id, method]));
+    const paymentsToCreate = isSettlement
+      ? payload.payments.map((payment) => {
+          const method = payment.paymentMethodId
+            ? methodById.get(payment.paymentMethodId)
+            : null;
+          return {
+            mode: method?.mode ?? payment.mode,
+            paymentMethodId: method?.id ?? null,
             amountCents: toCents(payment.amount),
-            reference: payment.reference ?? null,
-          })),
-        },
-        tips:
-          tipCents > 0
-            ? {
-                create: {
-                  staffId: table?.staffId ?? payload.staffId,
-                  amountCents: tipCents,
-                  paymentMode: payload.payments[0]?.mode ?? PaymentMode.CASH,
-                },
-              }
-            : undefined,
-      },
-    });
+            reference: payment.reference ?? method?.name ?? null,
+          };
+        })
+      : [];
 
-    if (table) {
+    const orderStatus = isSettlement
+      ? OrderStatus.PAID
+      : isPending
+        ? OrderStatus.PENDING
+        : OrderStatus.DRAFT;
+    const paidAt = isSettlement ? new Date() : null;
+    const orderData = {
+      businessDayId,
+      tableId: table?.id ?? null,
+      tableNumber,
+      customerName,
+      staffId: table?.staffId ?? payload.staffId,
+      cashierId: user.id,
+      status: orderStatus,
+      subtotalCents,
+      discountCents: cappedDiscountCents,
+      taxCents,
+      netSalesCents,
+      tipCents: isSettlement ? tipCents : 0,
+      totalCollectedCents: isSettlement ? netSalesCents + tipCents : 0,
+      complimentaryValueCents,
+      inventoryCostCents,
+      normalCommissionSalesCents: commission.normalEligibleSalesCents,
+      specialCommissionSalesCents: commission.specialDrinkSalesCents,
+      normalCommissionCents: commission.normalCommissionCents,
+      specialCommissionCents: commission.specialCommissionCents,
+      totalCommissionCents: commission.totalCommissionCents,
+      paidAt,
+    };
+
+    const createdOrder = draftOrder
+      ? await tx.order.update({
+          where: { id: draftOrder.id },
+          data: {
+            ...orderData,
+            items: { deleteMany: {}, create: orderItems },
+            payments: { deleteMany: {}, create: paymentsToCreate },
+            tips: {
+              deleteMany: {},
+              ...(isSettlement && tipCents > 0
+                ? {
+                    create: {
+                      staffId: table?.staffId ?? payload.staffId,
+                      amountCents: tipCents,
+                      paymentMode: paymentsToCreate[0]?.mode ?? PaymentMode.CASH,
+                    },
+                  }
+                : {}),
+            },
+          },
+        })
+      : await tx.order.create({
+          data: {
+            billNumber: nextBillNumber(),
+            ...orderData,
+            items: { create: orderItems },
+            payments: { create: paymentsToCreate },
+            tips:
+              isSettlement && tipCents > 0
+                ? {
+                    create: {
+                      staffId: table?.staffId ?? payload.staffId,
+                      amountCents: tipCents,
+                      paymentMode: paymentsToCreate[0]?.mode ?? PaymentMode.CASH,
+                    },
+                  }
+                : undefined,
+          },
+        });
+
+    if (draftOrder && (isSettlement || isPending)) {
+      await tx.inventoryTransaction.deleteMany({ where: { orderId: createdOrder.id } });
+    }
+
+    if (table && (isSettlement || isPending)) {
       await tx.barTable.update({
         where: { id: table.id },
         data: {
@@ -537,27 +637,29 @@ export async function createPosOrder(formData: FormData) {
       });
     }
 
-    for (const line of payload.items) {
-      const item = itemById.get(line.itemId);
-      if (!item) {
-        throw new Error("Invalid inventory line");
+    if (isSettlement || isPending) {
+      for (const line of payload.items) {
+        const item = itemById.get(line.itemId);
+        if (!item) {
+          throw new Error("Invalid inventory line");
+        }
+        const totalCostCents = Math.round(item.purchaseCostCents * line.quantity);
+        await tx.item.update({
+          where: { id: item.id },
+          data: { stockQuantity: { decrement: line.quantity } },
+        });
+        await tx.inventoryTransaction.create({
+          data: {
+            itemId: item.id,
+            orderId: createdOrder.id,
+            type: line.isComplimentary ? "COMPLIMENTARY" : "SALE",
+            quantityChange: -line.quantity,
+            unitCostCents: item.purchaseCostCents,
+            totalCostCents,
+            notes: line.isComplimentary ? "Complimentary offer item" : "POS sale",
+          },
+        });
       }
-      const totalCostCents = Math.round(item.purchaseCostCents * line.quantity);
-      await tx.item.update({
-        where: { id: item.id },
-        data: { stockQuantity: { decrement: line.quantity } },
-      });
-      await tx.inventoryTransaction.create({
-        data: {
-          itemId: item.id,
-          orderId: createdOrder.id,
-          type: line.isComplimentary ? "COMPLIMENTARY" : "SALE",
-          quantityChange: -line.quantity,
-          unitCostCents: item.purchaseCostCents,
-          totalCostCents,
-          notes: line.isComplimentary ? "Complimentary offer item" : "POS sale",
-        },
-      });
     }
 
     return createdOrder;
@@ -571,8 +673,60 @@ export async function createPosOrder(formData: FormData) {
   }
 
   revalidatePath("/pos");
+  revalidatePath("/");
+  revalidatePath("/tables");
   revalidatePath("/reports");
   revalidatePath(`/invoices/customer/${order.id}`);
+  if (action === "SETTLE" || action === "PENDING") {
+    redirect(`/invoices/customer/${order.id}`);
+  }
+  redirect("/tables");
+}
+
+export async function settlePendingOrder(formData: FormData) {
+  const user = await requirePermission("pos.create");
+  const orderId = formString(formData, "orderId");
+  const paymentMethodId = formString(formData, "paymentMethodId");
+  const amountCents = toCents(formNumber(formData, "amount"));
+
+  const order = await prisma.order.findUniqueOrThrow({
+    where: { id: orderId },
+    include: { payments: true },
+  });
+  if (order.status !== OrderStatus.PENDING) {
+    throw new Error("Only pending bills can be collected");
+  }
+  const dueCents = order.netSalesCents + order.tipCents;
+  if (amountCents !== dueCents) {
+    throw new Error("Payment amount must match pending bill amount");
+  }
+
+  const method = await prisma.paymentMethod.findUniqueOrThrow({
+    where: { id: paymentMethodId },
+  });
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      cashierId: user.id,
+      status: OrderStatus.PAID,
+      paidAt: new Date(),
+      totalCollectedCents: amountCents,
+      payments: {
+        deleteMany: {},
+        create: {
+          mode: method.mode,
+          paymentMethodId: method.id,
+          amountCents,
+          reference: method.name,
+        },
+      },
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/tables");
+  revalidatePath("/invoices/customer");
   redirect(`/invoices/customer/${order.id}`);
 }
 
