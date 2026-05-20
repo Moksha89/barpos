@@ -70,12 +70,12 @@ export default async function PosPage({
     : null;
 
   return (
-    <div className="p-4 text-stone-950 sm:p-6">
+    <div className="p-2.5 text-stone-950 sm:p-4">
       <header className="mx-auto mb-4 max-w-7xl">
-        <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-700">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
           POS Billing
         </p>
-        <h1 className="mt-1 text-2xl font-black">Table order</h1>
+        <h1 className="mt-1 text-lg font-black">Table order</h1>
         <p className="mt-1 text-sm text-stone-600">
           Save items to the table during service, reopen anytime, then settle or mark pending at the end.
         </p>

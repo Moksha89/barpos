@@ -237,13 +237,13 @@ export function PosBillingClient({
   };
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
-      <section className="rounded-2xl bg-white p-3 shadow-sm sm:p-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+    <div className="mx-auto grid max-w-7xl gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <section className="rounded-xl bg-white p-2.5 shadow-sm sm:p-2.5">
+        <div className="grid gap-2.5 sm:grid-cols-3">
           <label className="grid gap-1 text-sm font-bold">
             Table / Customer
             <input
-              className="min-h-10 rounded-xl border border-stone-200 px-3 disabled:bg-stone-100"
+              className="min-h-9 rounded-lg border border-stone-200 px-3 disabled:bg-stone-100"
               onChange={(event) => setTableNumber(event.target.value)}
               placeholder="T-12"
               readOnly={Boolean(table)}
@@ -253,7 +253,7 @@ export function PosBillingClient({
           <label className="grid gap-1 text-sm font-bold">
             Customer name
             <input
-              className="min-h-10 rounded-xl border border-stone-200 px-3 disabled:bg-stone-100"
+              className="min-h-9 rounded-lg border border-stone-200 px-3 disabled:bg-stone-100"
               onChange={(event) => setCustomerName(event.target.value)}
               placeholder="Walk-in"
               readOnly={Boolean(table)}
@@ -263,7 +263,7 @@ export function PosBillingClient({
           <label className="grid gap-1 text-sm font-bold">
             Waitress / Staff
             <select
-              className="min-h-10 rounded-xl border border-stone-200 px-3 disabled:bg-stone-100"
+              className="min-h-9 rounded-lg border border-stone-200 px-3 disabled:bg-stone-100"
               disabled={Boolean(table)}
               onChange={(event) => setStaffId(event.target.value)}
               value={staffId}
@@ -280,7 +280,7 @@ export function PosBillingClient({
         <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
           {categories.map((category) => (
             <button
-              className={`min-h-10 rounded-xl px-3 text-sm font-black ${
+              className={`min-h-9 rounded-lg px-3 text-sm font-black ${
                 category.id === selectedCategoryId
                   ? "bg-stone-950 text-white"
                   : "bg-stone-100 text-stone-700"
@@ -297,13 +297,13 @@ export function PosBillingClient({
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {visibleItems.map((item) => (
             <button
-              className="min-h-20 rounded-xl border border-stone-200 bg-stone-50 p-3 text-left transition hover:border-amber-300 hover:bg-amber-50"
+              className="min-h-16 rounded-lg border border-stone-200 bg-stone-50 p-2.5 text-left transition hover:border-amber-300 hover:bg-amber-50"
               key={item.id}
               onClick={() => addItem(item)}
               type="button"
             >
               <p className="font-black">{item.name}</p>
-              <p className="mt-1 text-base font-black text-amber-700">
+              <p className="mt-1 text-sm font-black text-amber-700">
                 {formatCurrency(item.sellingPriceCents)}
               </p>
               <p className="mt-1 text-xs text-stone-500">
@@ -314,16 +314,16 @@ export function PosBillingClient({
           ))}
         </div>
 
-        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-2.5">
           <h2 className="font-black">Eligible complimentary starters</h2>
           {eligibleOffers.length === 0 ? (
-            <p className="mt-2 text-sm text-stone-600">
+            <p className="mt-1 text-sm text-stone-600">
               Add eligible alcohol items to unlock configured offers.
             </p>
           ) : (
-            <div className="mt-3 grid gap-3">
+            <div className="mt-3 grid gap-2.5">
               {eligibleOffers.map(({ offer, remaining }) => (
-                <div key={offer.id} className="rounded-2xl bg-white p-3">
+                <div key={offer.id} className="rounded-xl bg-white p-2.5">
                   <p className="text-sm font-black">
                     {offer.name} · {remaining} free item(s) remaining
                   </p>
@@ -346,10 +346,10 @@ export function PosBillingClient({
         </div>
       </section>
 
-      <aside className="rounded-2xl bg-stone-950 p-3 text-white shadow-sm sm:p-4">
-        <div className="flex items-start justify-between gap-3">
+      <aside className="rounded-xl bg-stone-950 p-2.5 text-white shadow-sm sm:p-4">
+        <div className="flex items-start justify-between gap-2.5">
           <div>
-            <h2 className="text-xl font-black">Table bill</h2>
+            <h2 className="text-lg font-black">Table bill</h2>
             <p className="mt-1 text-sm text-stone-400">
               {selectedStaff?.name ?? "Select staff"} · {existingOrder ? "saved table open" : "new table order"}
             </p>
@@ -359,10 +359,10 @@ export function PosBillingClient({
           </span>
         </div>
 
-        <div className="mt-3 grid max-h-[300px] gap-2 overflow-y-auto pr-1">
+        <div className="mt-3 grid max-h-[240px] gap-2 overflow-y-auto pr-1">
           {cart.map((line) => (
-            <div key={line.key} className="rounded-xl bg-white/10 p-2.5">
-              <div className="flex items-start justify-between gap-3">
+            <div key={line.key} className="rounded-lg bg-white/10 p-2.5">
+              <div className="flex items-start justify-between gap-2.5">
                 <div>
                   <p className="font-bold">{line.item.name}</p>
                   <p className="text-xs text-stone-400">
@@ -384,11 +384,11 @@ export function PosBillingClient({
           ))}
         </div>
 
-        <div className="mt-4 grid gap-3">
+        <div className="mt-3 grid gap-2.5">
           <label className="grid gap-1 text-sm font-bold">
             Discount
             <input
-              className="min-h-11 rounded-xl border border-white/10 bg-white/10 px-3"
+              className="min-h-10 rounded-lg border border-white/10 bg-white/10 px-3"
               min="0"
               onChange={(event) => setDiscount(Number(event.target.value))}
               type="number"
@@ -398,7 +398,7 @@ export function PosBillingClient({
           <label className="grid gap-1 text-sm font-bold">
             Tip (100% waitress)
             <input
-              className="min-h-11 rounded-xl border border-white/10 bg-white/10 px-3"
+              className="min-h-10 rounded-lg border border-white/10 bg-white/10 px-3"
               min="0"
               onChange={(event) => setTip(Number(event.target.value))}
               type="number"
@@ -407,7 +407,7 @@ export function PosBillingClient({
           </label>
         </div>
 
-        <div className="mt-4 rounded-2xl bg-white/10 p-4 text-sm">
+        <div className="mt-3 rounded-xl bg-white/10 p-4 text-sm">
           <div className="flex justify-between"><span>Subtotal</span><b>AED {subtotal.toFixed(0)}</b></div>
           <div className="flex justify-between"><span>Discount</span><b>AED {discount.toFixed(0)}</b></div>
           <div className="flex justify-between"><span>Restaurant sale</span><b>AED {netSales.toFixed(0)}</b></div>
@@ -417,11 +417,11 @@ export function PosBillingClient({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-3 grid gap-2">
           {payments.map((payment, index) => (
             <div className="grid grid-cols-[1fr_1fr_auto] gap-2" key={`${payment.mode}-${index}`}>
               <select
-                className="min-h-10 rounded-xl bg-white px-2 text-sm text-stone-950"
+                className="min-h-9 rounded-lg bg-white px-2 text-sm text-stone-950"
                 onChange={(event) =>
                   setPayments((current) =>
                     current.map((entry, entryIndex) => {
@@ -445,7 +445,7 @@ export function PosBillingClient({
                 ))}
               </select>
               <input
-                className="min-h-10 rounded-xl bg-white px-2 text-sm text-stone-950"
+                className="min-h-9 rounded-lg bg-white px-2 text-sm text-stone-950"
                 onChange={(event) =>
                   setPayments((current) =>
                     current.map((entry, entryIndex) =>
@@ -459,7 +459,7 @@ export function PosBillingClient({
                 value={payment.amount}
               />
               <button
-                className="rounded-xl bg-white/10 px-3 text-xs font-bold"
+                className="rounded-lg bg-white/10 px-3 text-xs font-bold"
                 onClick={() => setPayments((current) => current.filter((_, entryIndex) => entryIndex !== index))}
                 type="button"
               >
@@ -469,7 +469,7 @@ export function PosBillingClient({
           ))}
           <div className="grid grid-cols-2 gap-2">
             <button
-              className="min-h-10 rounded-xl bg-white/10 text-xs font-bold"
+              className="min-h-9 rounded-lg bg-white/10 text-xs font-bold"
               onClick={() =>
                 setPayments((current) => [
                   ...current,
@@ -484,7 +484,7 @@ export function PosBillingClient({
             >
               Add split
             </button>
-            <button className="min-h-10 rounded-xl bg-amber-400 text-xs font-black text-stone-950" onClick={setExactCash} type="button">
+            <button className="min-h-9 rounded-lg bg-amber-400 text-xs font-black text-stone-950" onClick={setExactCash} type="button">
               Exact cash
             </button>
           </div>
@@ -493,11 +493,11 @@ export function PosBillingClient({
           </p>
         </div>
 
-        <form action={createPosOrder} className="mt-4 grid gap-2" onSubmit={prepareOrder}>
+        <form action={createPosOrder} className="mt-3 grid gap-2" onSubmit={prepareOrder}>
           <input name="orderJson" ref={orderJsonRef} type="hidden" />
           <input ref={orderActionRef} type="hidden" defaultValue="SAVE" />
           <button
-            className="min-h-11 w-full rounded-xl bg-white px-4 text-sm font-black text-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 w-full rounded-lg bg-white px-4 text-sm font-black text-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={cart.length === 0 || !staffId}
             onClick={() => {
               if (orderActionRef.current) orderActionRef.current.value = "SAVE";
@@ -507,7 +507,7 @@ export function PosBillingClient({
             Save to active table
           </button>
           <button
-            className="min-h-11 w-full rounded-xl bg-amber-400 px-4 text-sm font-black text-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 w-full rounded-lg bg-amber-400 px-4 text-sm font-black text-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={cart.length === 0 || !staffId || paid !== totalDue}
             onClick={() => {
               if (orderActionRef.current) orderActionRef.current.value = "SETTLE";
@@ -517,7 +517,7 @@ export function PosBillingClient({
             Settle and print invoice
           </button>
           <button
-            className="min-h-11 w-full rounded-xl border border-amber-400 px-4 text-sm font-black text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 w-full rounded-lg border border-amber-400 px-4 text-sm font-black text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={cart.length === 0 || !staffId}
             onClick={() => {
               if (orderActionRef.current) orderActionRef.current.value = "PENDING";

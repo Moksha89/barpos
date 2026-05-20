@@ -24,7 +24,10 @@ export async function getBusinessDay() {
 export async function getOrOpenBusinessDay() {
   const businessDay = await getBusinessDay();
   if (businessDay.status !== "OPEN") {
-    throw new Error("Business day is closed. Reopen the day before creating tables.");
+    return prisma.businessDay.update({
+      where: { id: businessDay.id },
+      data: { status: "OPEN", closedAt: null },
+    });
   }
   return businessDay;
 }

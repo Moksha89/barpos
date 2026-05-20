@@ -19,7 +19,7 @@ export default async function CustomerInvoicePage() {
     <div className="p-4 text-stone-950 sm:p-6">
       <section className="mx-auto grid max-w-7xl gap-5">
         <header>
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
             Invoices
           </p>
           <h1 className="mt-2 text-3xl font-black">Customer Invoices</h1>

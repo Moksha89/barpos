@@ -40,24 +40,24 @@ export function AppShell({
     <aside
       className={clsx(
         "flex h-full flex-col bg-stone-950 text-white transition-all",
-        collapsed ? "lg:w-20" : "lg:w-72",
+        collapsed ? "lg:w-16" : "lg:w-60",
       )}
     >
-      <div className="flex min-h-16 items-center gap-3 border-b border-white/10 px-4">
-        <Link className="flex items-center gap-3" href="/">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-400 text-stone-950">
-            <StoreIcon className="h-5 w-5" />
+      <div className="flex min-h-12 items-center gap-2 border-b border-white/10 px-3">
+        <Link className="flex items-center gap-2" href="/">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-amber-400 text-stone-950">
+            <StoreIcon className="h-4 w-4" />
           </span>
           {!collapsed ? (
             <span>
               <span className="block text-sm font-black leading-tight">BarPOS</span>
-              <span className="block text-xs font-semibold text-amber-200">Dubai AED</span>
+              <span className="block text-[11px] font-semibold text-amber-200">Dubai AED</span>
             </span>
           ) : null}
         </Link>
       </div>
 
-      <nav className="grid flex-1 content-start gap-1 overflow-y-auto p-3">
+      <nav className="grid flex-1 content-start gap-1 overflow-y-auto p-2">
         {allowedItems.map((item) => {
           const Icon = item.icon;
           const itemPath = item.href.split("#")[0];
@@ -66,7 +66,7 @@ export function AppShell({
           return (
             <Link
               className={clsx(
-                "flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-bold transition",
+                "flex min-h-9 items-center gap-2 rounded-xl px-2.5 text-xs font-bold transition",
                 active
                   ? "bg-amber-400 text-stone-950"
                   : "text-stone-200 hover:bg-white/10 hover:text-white",
@@ -76,7 +76,7 @@ export function AppShell({
               onClick={() => setMobileOpen(false)}
               title={item.label}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <Icon className="h-4 w-4 shrink-0" />
               {!collapsed ? <span>{item.label}</span> : null}
             </Link>
           );
@@ -84,7 +84,7 @@ export function AppShell({
       </nav>
 
       <button
-        className="m-3 hidden min-h-11 rounded-2xl border border-white/10 text-xs font-bold text-stone-300 lg:block"
+        className="m-2 hidden min-h-9 rounded-xl border border-white/10 text-xs font-bold text-stone-300 lg:block"
         onClick={() => setCollapsed((value) => !value)}
         type="button"
       >
@@ -110,22 +110,22 @@ export function AppShell({
       ) : null}
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-stone-200 bg-white/95 px-3 backdrop-blur sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="sticky top-0 z-40 flex min-h-12 items-center justify-between border-b border-stone-200 bg-white/95 px-2.5 backdrop-blur sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               aria-label="Open menu"
-              className="grid h-11 w-11 place-items-center rounded-2xl bg-stone-950 text-white lg:hidden"
+              className="grid h-9 w-9 place-items-center rounded-xl bg-stone-950 text-white lg:hidden"
               onClick={() => setMobileOpen(true)}
               type="button"
             >
-              <MenuIcon className="h-5 w-5" />
+              <MenuIcon className="h-4 w-4" />
             </button>
-            <Link className="flex min-w-0 items-center gap-3" href="/">
-              <span className="hidden h-10 w-10 shrink-0 place-items-center rounded-2xl bg-stone-950 text-amber-300 sm:grid">
-                <StoreIcon className="h-5 w-5" />
+            <Link className="flex min-w-0 items-center gap-2" href="/">
+              <span className="hidden h-8 w-8 shrink-0 place-items-center rounded-xl bg-stone-950 text-amber-300 sm:grid">
+                <StoreIcon className="h-4 w-4" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-base font-black">BarPOS Restaurant</span>
+                <span className="block truncate text-sm font-black">BarPOS</span>
                 <span className="block truncate text-xs font-semibold text-stone-500">
                   {dashboardLabel} dashboard
                 </span>
@@ -133,30 +133,30 @@ export function AppShell({
             </Link>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               aria-label="Notifications"
-              className="grid h-10 w-10 place-items-center rounded-2xl border border-stone-200 bg-white"
+              className="grid h-8 w-8 place-items-center rounded-xl border border-stone-200 bg-white"
               type="button"
             >
-              <BellIcon className="h-5 w-5" />
+              <BellIcon className="h-4 w-4" />
             </button>
-            <div className="hidden items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2 sm:flex">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-amber-400 text-sm font-black">
+            <div className="hidden items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-2 py-1.5 sm:flex">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-amber-400 text-xs font-black">
                 {user.name.slice(0, 1).toUpperCase()}
               </span>
-              <span className="text-sm">
+              <span className="text-xs">
                 <span className="block font-black">{user.name}</span>
                 <span className="block text-xs font-semibold text-stone-500">{user.role.label}</span>
               </span>
             </div>
             <form action={logoutAction}>
               <button
-                className="grid h-10 w-10 place-items-center rounded-2xl bg-stone-950 text-white"
+                className="grid h-8 w-8 place-items-center rounded-xl bg-stone-950 text-white"
                 title="Logout"
                 type="submit"
               >
-                <LogOutIcon className="h-5 w-5" />
+                <LogOutIcon className="h-4 w-4" />
               </button>
             </form>
           </div>

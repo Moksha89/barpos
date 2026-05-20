@@ -33,7 +33,7 @@ export default async function CustomerInvoiceDetailPage({
     <div className="bg-white p-4 text-stone-950">
       <section className="mx-auto max-w-md border border-stone-200 p-5 print:border-0">
         <div className="text-center">
-          <h1 className="text-2xl font-black">
+          <h1 className="text-xl font-black">
             {invoiceSetting?.restaurantName ?? "BarPOS"}
           </h1>
           <p className="text-sm text-stone-600">{invoiceSetting?.address}</p>
@@ -94,7 +94,7 @@ export default async function CustomerInvoiceDetailPage({
         <p className="mt-5 text-center text-sm font-bold">
           {invoiceSetting?.thankYouMessage ?? "Thank you. Visit again!"}
         </p>
-        <button className="no-print mt-5 min-h-11 w-full rounded-xl bg-stone-950 font-bold text-white" onClick={undefined}>
+        <button className="no-print mt-5 min-h-10 w-full rounded-xl bg-stone-950 font-bold text-white" onClick={undefined}>
           Use browser print
         </button>
       </section>

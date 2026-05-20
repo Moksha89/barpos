@@ -23,7 +23,7 @@ export default async function StaffPage() {
     <div className="p-4 text-stone-950 sm:p-6">
       <div className="mx-auto grid max-w-7xl gap-5">
         <header>
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
             Admin
           </p>
           <h1 className="mt-2 text-3xl font-black">Staff & Waitress Profiles</h1>
@@ -67,7 +67,7 @@ export default async function StaffPage() {
         <AdminCard title="Configured Staff" eyebrow={`${staff.length} staff`}>
           <div className="grid gap-3 md:grid-cols-2">
             {staff.map((member) => (
-              <article key={member.id} className="rounded-2xl border border-stone-200 p-4">
+              <article key={member.id} className="rounded-xl border border-stone-200 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-black">{member.name}</h2>
                   <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold">

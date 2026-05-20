@@ -37,7 +37,7 @@ export default async function SettingsPage() {
     <div className="p-4 text-stone-950 sm:p-6">
       <div className="mx-auto grid max-w-7xl gap-5">
         <header>
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
             Admin
           </p>
           <h1 className="mt-2 text-3xl font-black">System Settings</h1>
@@ -92,7 +92,7 @@ export default async function SettingsPage() {
         <AdminCard title="Payment Modes">
           <form action={createPaymentMethod} className="mb-4 grid gap-3 md:grid-cols-[1fr_150px_120px_auto_auto]">
             <TextInput name="name" placeholder="Card Machine 4 / UPI India" required />
-            <select className="min-h-11 rounded-2xl border border-stone-200 bg-white px-3 text-sm font-semibold" name="mode" defaultValue={PaymentMode.CARD}>
+            <select className="min-h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm font-semibold" name="mode" defaultValue={PaymentMode.CARD}>
               {Object.values(PaymentMode).map((mode) => (
                 <option key={mode} value={mode}>{mode}</option>
               ))}
@@ -129,7 +129,7 @@ export default async function SettingsPage() {
           <AdminCard title="Roles & Permissions">
             <div className="grid gap-3">
               {roles.map((role) => (
-                <article key={role.id} className="rounded-2xl border border-stone-200 p-3">
+                <article key={role.id} className="rounded-xl border border-stone-200 p-3">
                   <h2 className="font-black">{role.label}</h2>
                   <p className="mt-1 text-xs text-stone-500">
                     {role.permissions.map((entry) => entry.permission.label).join(" · ")}

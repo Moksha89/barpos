@@ -32,7 +32,7 @@ export default async function OffersPage() {
     <div className="p-4 text-stone-950 sm:p-6">
       <div className="mx-auto grid max-w-7xl gap-5">
         <header>
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-amber-700">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
             Admin
           </p>
           <h1 className="mt-2 text-3xl font-black">Offer Rules</h1>
@@ -85,7 +85,7 @@ export default async function OffersPage() {
                 <TextInput name="endDate" type="date" />
               </Field>
             </div>
-            <fieldset className="rounded-2xl border border-stone-200 p-3">
+            <fieldset className="rounded-xl border border-stone-200 p-3">
               <legend className="px-2 text-sm font-bold text-stone-700">
                 Eligible free items
               </legend>
@@ -112,14 +112,14 @@ export default async function OffersPage() {
         <AdminCard title="Configured Offers" eyebrow={`${offers.length} rules`}>
           <div className="grid gap-3">
             {offers.map((offer) => (
-              <article key={offer.id} className="rounded-2xl border border-stone-200 p-4">
+              <article key={offer.id} className="rounded-xl border border-stone-200 p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-lg font-black">{offer.name}</h2>
                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
                     {offer.active ? "Active" : "Inactive"}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-stone-600">
+                <p className="mt-1 text-sm text-stone-600">
                   Buy {offer.buyQuantity} × {offer.buyItem?.name ?? offer.buyCategory?.name ?? "configured item"} → {offer.freeQuantity} free {offer.freeCategory?.name ?? "item"}
                 </p>
                 <p className="mt-2 text-xs text-stone-500">

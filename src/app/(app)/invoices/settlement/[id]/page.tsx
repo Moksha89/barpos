@@ -29,7 +29,7 @@ export default async function SettlementReceiptPage({
     <main className="min-h-screen bg-white p-4 text-stone-950">
       <section className="mx-auto max-w-lg border border-stone-200 p-6 print:border-0">
         <div className="text-center">
-          <h1 className="text-2xl font-black">
+          <h1 className="text-xl font-black">
             {invoiceSetting?.restaurantName ?? "BarPOS"}
           </h1>
           <p className="text-sm text-stone-600">Waitress Settlement Receipt</p>
