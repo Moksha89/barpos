@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { PrintButton } from "@/components/print-button";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/money";
@@ -65,6 +66,7 @@ export default async function SettlementReceiptPage({
           <div className="border-t pt-2">Waitress Signature</div>
           <div className="border-t pt-2">Manager/Admin Signature</div>
         </div>
+        <PrintButton label="Print settlement receipt" />
       </section>
     </main>
   );

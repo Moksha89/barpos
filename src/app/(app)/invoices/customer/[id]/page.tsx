@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { PrintButton } from "@/components/print-button";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/money";
@@ -94,9 +95,7 @@ export default async function CustomerInvoiceDetailPage({
         <p className="mt-5 text-center text-sm font-bold">
           {invoiceSetting?.thankYouMessage ?? "Thank you. Visit again!"}
         </p>
-        <button className="no-print mt-5 min-h-10 w-full rounded-xl bg-stone-950 font-bold text-white" onClick={undefined}>
-          Use browser print
-        </button>
+        <PrintButton label="Print invoice" />
       </section>
     </div>
   );
