@@ -52,8 +52,7 @@ export default async function ReportsPage({
 
   const expenseCents = expenses.reduce((total, expense) => total + expense.amountCents, 0);
   const orderSummary = summarizeOrders(orders, expenseCents);
-  const importedCommissionCents = ledgerCommissions.reduce((total, entry) => total + entry.creditCents, 0);
-  const totalCommissionCents = orderSummary.staffCommissionCents + importedCommissionCents;
+  const totalCommissionCents = ledgerCommissions.reduce((total, entry) => total + entry.creditCents, 0);
   const netProfitCents = orderSummary.netSalesCents - orderSummary.inventoryCostCents - totalCommissionCents - expenseCents;
 
   const paymentBreakdown = new Map<string, number>();
@@ -73,7 +72,6 @@ export default async function ReportsPage({
   for (const order of orders) {
     const current = staffTotals.get(order.staff.name) ?? { sales: 0, commission: 0, tips: 0, bills: 0 };
     current.sales += order.netSalesCents;
-    current.commission += order.totalCommissionCents;
     current.tips += order.tipCents;
     current.bills += 1;
     staffTotals.set(order.staff.name, current);
@@ -96,7 +94,6 @@ export default async function ReportsPage({
   for (const order of orders) {
     const row = ensureDay(groupDateKey(order.paidAt));
     row.sales += order.netSalesCents;
-    row.commission += order.totalCommissionCents;
     row.tips += order.tipCents;
     row.bills += 1;
   }

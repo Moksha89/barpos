@@ -48,7 +48,6 @@ export default async function CommissionPage({
   for (const order of paidOrders) {
     const row = staffTotals.get(order.staff.name) ?? { sales: 0, commission: 0, bills: 0 };
     row.sales += order.netSalesCents;
-    row.commission += order.totalCommissionCents;
     row.bills += 1;
     staffTotals.set(order.staff.name, row);
   }

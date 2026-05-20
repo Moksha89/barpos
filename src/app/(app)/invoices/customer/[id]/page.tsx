@@ -31,8 +31,8 @@ export default async function CustomerInvoiceDetailPage({
   }
 
   return (
-    <div className="bg-white p-4 text-stone-950">
-      <section className="mx-auto max-w-md border border-stone-200 p-5 print:border-0">
+    <div className="receipt-print-page bg-white p-4 text-stone-950">
+      <section className="receipt-paper mx-auto max-w-md border border-stone-200 p-5 print:border-0">
         <div className="text-center">
           <h1 className="text-xl font-black">
             {invoiceSetting?.restaurantName ?? "BarPOS"}

@@ -27,11 +27,41 @@ textarea {
 }
 
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
   .no-print {
     display: none !important;
   }
 
+  header,
+  aside {
+    display: none !important;
+  }
+
+  html,
   body {
     background: white;
+    margin: 0;
+    padding: 0;
+    width: 80mm;
+  }
+
+  .receipt-print-page {
+    margin: 0 !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    width: 80mm !important;
+  }
+
+  .receipt-paper {
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 3mm !important;
+    width: 80mm !important;
   }
 }

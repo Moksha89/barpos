@@ -27,8 +27,8 @@ export default async function SettlementReceiptPage({
   }
 
   return (
-    <main className="min-h-screen bg-white p-4 text-stone-950">
-      <section className="mx-auto max-w-lg border border-stone-200 p-6 print:border-0">
+    <main className="receipt-print-page min-h-screen bg-white p-4 text-stone-950">
+      <section className="receipt-paper mx-auto max-w-lg border border-stone-200 p-6 print:border-0">
         <div className="text-center">
           <h1 className="text-xl font-black">
             {invoiceSetting?.restaurantName ?? "BarPOS"}
