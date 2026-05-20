@@ -33,6 +33,8 @@ export function AppShell({
   const BellIcon = headerIcons.Bell;
   const MenuIcon = headerIcons.Menu;
   const LogOutIcon = headerIcons.LogOut;
+  const dashboardLabel =
+    user.role.name === "OWNER_ADMIN" ? "Admin" : user.role.label;
 
   const sidebar = (
     <aside
@@ -125,7 +127,7 @@ export function AppShell({
               <span className="min-w-0">
                 <span className="block truncate text-base font-black">BarPOS Restaurant</span>
                 <span className="block truncate text-xs font-semibold text-stone-500">
-                  {user.role.label} dashboard
+                  {dashboardLabel} dashboard
                 </span>
               </span>
             </Link>
