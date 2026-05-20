@@ -9,6 +9,7 @@ import {
   createExpenseCategory,
   createPaymentMethod,
   createStaff,
+  updateDayPasscode,
   updateInvoiceSettings,
   updatePrinterSettings,
   updateUserPassword,
@@ -21,10 +22,11 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   await requirePermission("settings.manage");
-  const [invoiceSetting, printerSetting, expenseCategories, roles, paymentMethods, staff, users] =
+  const [invoiceSetting, printerSetting, dayPasscodeSetting, expenseCategories, roles, paymentMethods, staff, users] =
     await Promise.all([
       prisma.invoiceSetting.findFirst(),
       prisma.printerSetting.findFirst(),
+      prisma.dayPasscodeSetting.findFirst(),
       prisma.expenseCategory.findMany({ orderBy: { name: "asc" } }),
       prisma.role.findMany({
         include: { permissions: { include: { permission: true } } },
@@ -98,6 +100,27 @@ export default async function SettingsPage() {
             </form>
           </AdminCard>
         </div>
+
+        <AdminCard title="Day In / Day Out Passcode">
+          <form action={updateDayPasscode} className="grid gap-3 sm:max-w-md">
+            <input name="id" type="hidden" value={dayPasscodeSetting?.id ?? ""} />
+            <Field label="Passcode">
+              <TextInput
+                autoComplete="off"
+                defaultValue={dayPasscodeSetting?.passcode ?? "1599"}
+                inputMode="numeric"
+                minLength={4}
+                name="passcode"
+                required
+                type="password"
+              />
+            </Field>
+            <p className="text-xs font-semibold text-stone-500">
+              This passcode is required before staff can use Day In or Day Out on Billing.
+            </p>
+            <SubmitButton>Save day passcode</SubmitButton>
+          </form>
+        </AdminCard>
 
         <AdminCard title="Manage Employees" eyebrow={`${staff.length} employees`}>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

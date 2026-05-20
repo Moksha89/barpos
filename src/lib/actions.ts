@@ -37,6 +37,23 @@ async function audit(action: AuditAction, entityType: string, entityId?: string)
   });
 }
 
+async function getDayPasscode() {
+  const setting = await prisma.dayPasscodeSetting.findFirst({
+    orderBy: { createdAt: "asc" },
+  });
+
+  return setting?.passcode || "1599";
+}
+
+async function requireDayPasscode(formData: FormData) {
+  const passcode = formString(formData, "dayPasscode");
+  const expectedPasscode = await getDayPasscode();
+
+  if (passcode !== expectedPasscode) {
+    redirect("/?dayPasscode=invalid");
+  }
+}
+
 export async function loginAction(formData: FormData) {
   const ok = await signIn(
     formString(formData, "username"),
@@ -79,8 +96,9 @@ export async function createTable(formData: FormData) {
   redirect(`/pos?tableId=${table.id}`);
 }
 
-export async function openBusinessDay() {
+export async function openBusinessDay(formData: FormData) {
   await requirePermission("pos.create");
+  await requireDayPasscode(formData);
   const businessDate = businessDateStart();
   await prisma.businessDay.upsert({
     where: { businessDate },
@@ -91,8 +109,9 @@ export async function openBusinessDay() {
   revalidatePath("/tables");
 }
 
-export async function closeBusinessDay() {
+export async function closeBusinessDay(formData: FormData) {
   const user = await requirePermission("pos.create");
+  await requireDayPasscode(formData);
   const businessDay = await prisma.businessDay.findUnique({
     where: { businessDate: businessDateStart() },
   });
@@ -370,6 +389,24 @@ export async function updatePrinterSettings(formData: FormData) {
 
   await audit(AuditAction.SETTINGS_UPDATED, "PrinterSetting", setting.id);
   revalidatePath("/admin/settings");
+}
+
+export async function updateDayPasscode(formData: FormData) {
+  await requirePermission("settings.manage");
+  const id = formOptionalString(formData, "id");
+  const passcode = formString(formData, "passcode");
+
+  if (passcode.length < 4) {
+    redirect("/admin/settings?dayPasscode=invalid");
+  }
+
+  const setting = id
+    ? await prisma.dayPasscodeSetting.update({ where: { id }, data: { passcode } })
+    : await prisma.dayPasscodeSetting.create({ data: { passcode } });
+
+  await audit(AuditAction.SETTINGS_UPDATED, "DayPasscodeSetting", setting.id);
+  revalidatePath("/admin/settings");
+  revalidatePath("/");
 }
 
 export async function createExpense(formData: FormData) {

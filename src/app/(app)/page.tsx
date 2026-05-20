@@ -21,7 +21,8 @@ import { requirePermission } from "@/lib/auth";
 import { formatCurrency } from "@/lib/money";
 import { getActiveTableCards, nextTableNumber } from "@/lib/tables";
 import { AddTableDialog } from "@/components/add-table-dialog";
-import { Button, StatusBadge } from "@/components/ui";
+import { DayActionDialog } from "@/components/day-action-dialog";
+import { StatusBadge } from "@/components/ui";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -64,39 +65,45 @@ export default async function Home() {
 
   return (
     <div className="app-page text-stone-950">
-      <section className="relative overflow-hidden rounded-[26px] bg-[#050505] p-5 text-white shadow-[0_18px_50px_rgba(15,23,42,0.12)] sm:p-6 lg:p-8">
-        <div className="absolute right-10 top-0 hidden h-52 w-52 rounded-full border border-dashed border-[var(--color-gold)]/25 lg:block" />
-        <div className="absolute right-20 top-8 hidden h-36 w-36 rounded-full border border-dashed border-[var(--color-gold)]/20 lg:block" />
-        <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_328px] lg:items-center">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--color-gold)]">
-              Active tables
+      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--color-gold-dark)]">
+              Billing
             </p>
-            <h1 className="mt-3 max-w-xl text-2xl font-black tracking-tight sm:text-[28px]">
-              Table billing dashboard
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-stone-200">
-              Save orders during dinner, reopen active tables, settle at the end, or keep unpaid bills pending by waitress.
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-black tracking-tight text-stone-950 sm:text-2xl">
+                Table billing dashboard
+              </h1>
+              <span className="rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-black uppercase text-green-700">
+                Day {businessDay.status}
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-stone-600">
+              {dateLabel} · {formatCurrency(todaySalesCents)} sales today · {openTables.length} open tables
             </p>
           </div>
-          <div className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-              <form action={openBusinessDay}>
-                <Button className="min-h-12 w-full border-white/30 bg-white/5 text-white hover:bg-white/10" size="lg" type="submit" variant="secondary">
-                  <Sun className="h-4 w-4 text-[var(--color-gold)]" />
-                  Open Day
-                </Button>
-              </form>
-              <form action={closeBusinessDay}>
-                <Button className="min-h-12 w-full border-white/30 bg-white/5 text-white hover:bg-white/10" size="lg" type="submit" variant="secondary">
-                  <Moon className="h-4 w-4 text-white" />
-                  Close Day
-                </Button>
-              </form>
-            </div>
+          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
+            <DayActionDialog
+              action={openBusinessDay}
+              buttonClassName="min-h-10 w-full"
+              helper="Enter the day passcode to open today's billing day."
+              title="Day In"
+            >
+              <Sun className="h-4 w-4 text-[var(--color-gold-dark)]" />
+              Day In
+            </DayActionDialog>
+            <DayActionDialog
+              action={closeBusinessDay}
+              buttonClassName="min-h-10 w-full"
+              helper="Enter the day passcode to close today's billing day."
+              title="Day Out"
+            >
+              <Moon className="h-4 w-4" />
+              Day Out
+            </DayActionDialog>
             <AddTableDialog
-              buttonClassName="min-h-12 w-full text-sm"
-              buttonSize="lg"
+              buttonClassName="min-h-10 w-full text-sm"
               staff={staff}
               suggestedTableNumber={suggestedTableNumber}
             />
