@@ -10,7 +10,6 @@ import {
   Filter,
   MoreVertical,
   Moon,
-  Plus,
   ReceiptText,
   Sparkles,
   Sun,
@@ -20,14 +19,20 @@ import {
 import { closeBusinessDay, openBusinessDay } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { formatCurrency } from "@/lib/money";
-import { getActiveTableCards } from "@/lib/tables";
-import { Button, ButtonLink, StatusBadge } from "@/components/ui";
+import { getActiveTableCards, nextTableNumber } from "@/lib/tables";
+import { AddTableDialog } from "@/components/add-table-dialog";
+import { Button, StatusBadge } from "@/components/ui";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   await requirePermission("dashboard.view");
-  const { businessDay, tables } = await getActiveTableCards();
+  const [{ businessDay, tables }, staff] = await Promise.all([
+    getActiveTableCards(),
+    prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+  ]);
+  const suggestedTableNumber = await nextTableNumber(businessDay.id);
   const openTables = tables.filter((table) => table.status === "OPEN");
   const settledTables = tables.filter((table) => table.status === "SETTLED");
   const todaySalesCents = tables.reduce(
@@ -89,10 +94,12 @@ export default async function Home() {
                 </Button>
               </form>
             </div>
-            <ButtonLink className="min-h-12 w-full text-sm" href="/tables/new" size="lg">
-              <Plus className="h-4 w-4" />
-              Add New Table
-            </ButtonLink>
+            <AddTableDialog
+              buttonClassName="min-h-12 w-full text-sm"
+              buttonSize="lg"
+              staff={staff}
+              suggestedTableNumber={suggestedTableNumber}
+            />
           </div>
         </div>
       </section>
@@ -144,10 +151,9 @@ export default async function Home() {
                 <div>
                   <h3 className="text-lg font-black">No active tables</h3>
                   <p className="mt-1 text-sm text-stone-600">Create the first bill for today&apos;s service.</p>
-                  <ButtonLink className="mt-4" href="/tables/new" size="md">
-                    <Plus className="h-4 w-4" />
-                    Add New Table
-                  </ButtonLink>
+                  <div className="mt-4">
+                    <AddTableDialog staff={staff} suggestedTableNumber={suggestedTableNumber} />
+                  </div>
                 </div>
               </div>
             </div>
