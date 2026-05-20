@@ -207,15 +207,17 @@ export function PosBillingClient({
     if (!orderJsonRef.current) {
       return;
     }
+    const selectedAction = orderActionRef.current?.value ?? "SAVE";
+    const isSettlement = selectedAction === "SETTLE";
     orderJsonRef.current.value =
       JSON.stringify({
         tableId: table?.id ?? null,
-        action: orderActionRef.current?.value ?? "SAVE",
+        action: selectedAction,
         tableNumber,
         customerName,
         staffId,
         discount,
-        tip,
+        tip: isSettlement ? tip : 0,
         items: cart.map((line) => ({
           itemId: line.item.id,
           quantity: line.quantity,
@@ -223,7 +225,7 @@ export function PosBillingClient({
           offerId: line.offerId ?? null,
           complimentaryReason: line.complimentaryReason ?? null,
         })),
-        payments,
+        payments: isSettlement ? payments : [],
       });
   };
 

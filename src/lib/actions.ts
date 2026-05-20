@@ -472,6 +472,15 @@ export async function createPosOrder(formData: FormData) {
   const user = await requirePermission("pos.create");
   const payload = parsePosOrderPayload(formData);
   const action = payload.action ?? "SETTLE";
+  if (payload.tableId) {
+    const selectedTable = await prisma.barTable.findUnique({
+      where: { id: payload.tableId },
+      select: { status: true },
+    });
+    if (!selectedTable || selectedTable.status !== TableStatus.OPEN) {
+      redirect("/tables");
+    }
+  }
   if (!hasPermission(user, "pos.discount") && Number(payload.discount) > 0) {
     throw new Error("Discount permission required");
   }

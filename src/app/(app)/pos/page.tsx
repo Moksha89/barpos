@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { PosBillingClient } from "@/components/pos-billing-client";
-import { PageHeader } from "@/components/ui";
+import { ButtonLink, PageHeader, StatusBadge } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -69,6 +70,15 @@ export default async function PosPage({
         })),
       }
     : null;
+  const unavailableTable =
+    table && table.status !== "OPEN"
+      ? {
+          id: table.id,
+          tableName: table.tableName,
+          status: table.status,
+          customerName: table.customerName,
+        }
+      : null;
 
   return (
     <div className="app-page text-stone-950">
@@ -77,14 +87,40 @@ export default async function PosPage({
         title="Table order"
         subtitle="Save items to the table during service, reopen anytime, then settle or mark pending at the end."
       />
-      <PosBillingClient
-        categories={categories}
-        items={items}
-        staff={staff}
-        offers={offers}
-        paymentMethods={paymentMethods}
-        table={tableContext}
-      />
+      {unavailableTable ? (
+        <section className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">
+            Table unavailable
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-black text-stone-950">{unavailableTable.tableName}</h2>
+            <StatusBadge tone="warning">{unavailableTable.status}</StatusBadge>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
+            This table is already {unavailableTable.status.toLowerCase()} and cannot be edited from POS.
+            Use Billing to create a new table, or use Active Tables to collect a pending bill.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ButtonLink href="/" variant="primary">Go to Billing</ButtonLink>
+            <ButtonLink href="/tables" variant="secondary">View Active Tables</ButtonLink>
+            <Link
+              className="inline-flex min-h-9 items-center justify-center rounded-lg px-3 text-sm font-black text-stone-600 transition hover:bg-stone-50"
+              href="/tables/new"
+            >
+              Create table page
+            </Link>
+          </div>
+        </section>
+      ) : (
+        <PosBillingClient
+          categories={categories}
+          items={items}
+          staff={staff}
+          offers={offers}
+          paymentMethods={paymentMethods}
+          table={tableContext}
+        />
+      )}
     </div>
   );
 }
