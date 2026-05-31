@@ -31,10 +31,12 @@ export default async function ProductsPage({
   const [categories, items, inventoryTransactions] = await Promise.all([
     prisma.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     prisma.item.findMany({
+      where: { active: true },
       include: { category: true },
       orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
     }),
     prisma.inventoryTransaction.findMany({
+      where: { item: { active: true } },
       include: { item: true },
       orderBy: { createdAt: "desc" },
       take: 25,
