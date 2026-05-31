@@ -2,7 +2,7 @@
 
 import { PaymentMode } from "@prisma/client";
 import { useMemo, useRef, useState } from "react";
-import { Plus, ReceiptText, Trash2 } from "lucide-react";
+import { Plus, ReceiptText, Search, Trash2 } from "lucide-react";
 
 import { createPosOrder } from "@/lib/actions";
 import { formatCurrency, fromCents } from "@/lib/money";
@@ -115,6 +115,7 @@ export function PosBillingClient({
   const [customerName, setCustomerName] = useState(table?.customerName ?? "");
   const [discount, setDiscount] = useState(fromCents(existingOrder?.discountCents ?? 0));
   const [tip, setTip] = useState(0);
+  const [itemSearch, setItemSearch] = useState("");
   const [payments, setPayments] = useState<PaymentLine[]>([
     {
       mode: defaultMethod?.mode ?? PaymentMode.CASH,
@@ -127,7 +128,14 @@ export function PosBillingClient({
   const orderActionRef = useRef<HTMLInputElement>(null);
 
   const selectedStaff = staff.find((member) => member.id === staffId);
-  const visibleItems = items.filter((item) => item.categoryId === selectedCategoryId);
+  const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
+  const normalizedItemSearch = itemSearch.trim().toLowerCase();
+  const visibleItems = items.filter((item) => {
+    if (normalizedItemSearch) {
+      return item.name.toLowerCase().includes(normalizedItemSearch);
+    }
+    return item.categoryId === selectedCategoryId;
+  });
 
   const nextCartKey = () => {
     keyCounter.current += 1;
@@ -280,7 +288,18 @@ export function PosBillingClient({
           </label>
         </div>
 
-        <div className="mt-4 flex gap-2 overflow-x-auto rounded-2xl bg-stone-50 p-2">
+        <label className="mt-4 flex min-h-11 items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-stone-50 px-3 focus-within:border-[var(--color-gold)] focus-within:ring-2 focus-within:ring-[var(--color-gold)]">
+          <Search className="h-4 w-4 shrink-0 text-stone-500" />
+          <input
+            className="min-h-10 flex-1 bg-transparent text-sm font-bold text-stone-950 outline-none placeholder:text-stone-400"
+            onChange={(event) => setItemSearch(event.target.value)}
+            placeholder="Quick search items to add..."
+            type="search"
+            value={itemSearch}
+          />
+        </label>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto rounded-2xl bg-stone-50 p-2">
           {categories.map((category) => (
             <button
               className={`min-h-9 shrink-0 rounded-xl px-3 text-xs font-black transition ${
@@ -313,6 +332,7 @@ export function PosBillingClient({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1">
+                  {normalizedItemSearch ? <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-stone-500">{categoryById.get(item.categoryId)?.name}</span> : null}
                   <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-stone-500">Stock {item.stockQuantity}</span>
                   {item.specialCommissionEligible ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">Special</span> : null}
                   {item.complimentaryEligible ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-700">Free eligible</span> : null}

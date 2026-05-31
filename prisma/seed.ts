@@ -187,61 +187,61 @@ async function main() {
     {
       name: "Rice & Biryani",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Fried Rice & Noodles",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Seafood Starters",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Breads",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Fresh Juices",
       type: "beverage",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Veg Starters",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Veg Main Course",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Fruit Platter",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Non Veg Starters",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
     {
       name: "Non Veg Main Course",
       type: "food",
-      commissionEligible: true,
+      commissionEligible: false,
       complimentaryEligible: false,
     },
   ] as const;
@@ -679,6 +679,7 @@ async function main() {
     if (!category) {
       throw new Error(`Missing category ${categoryName}`);
     }
+    const commissionEligible = category.type !== "food" && category.type !== "beverage";
 
     await prisma.item.upsert({
       where: { sku: item.sku },
@@ -689,7 +690,7 @@ async function main() {
         purchaseCostCents: toCents(item.purchaseCost),
         stockQuantity: 0,
         unitType: item.unitType,
-        commissionEligible: true,
+        commissionEligible,
         specialCommissionEligible: false,
         complimentaryEligible: false,
         active: true,
@@ -702,7 +703,7 @@ async function main() {
         purchaseCostCents: toCents(item.purchaseCost),
         stockQuantity: 0,
         unitType: item.unitType,
-        commissionEligible: true,
+        commissionEligible,
         specialCommissionEligible: false,
         complimentaryEligible: false,
         active: true,
