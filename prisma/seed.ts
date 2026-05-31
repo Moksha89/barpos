@@ -107,45 +107,9 @@ async function main() {
 
   const categories = [
     {
-      name: "Beer",
+      name: "Inventory",
       type: "alcohol",
       commissionEligible: true,
-      complimentaryEligible: false,
-    },
-    {
-      name: "Half Bottle",
-      type: "alcohol",
-      commissionEligible: true,
-      complimentaryEligible: false,
-    },
-    {
-      name: "Full Bottle",
-      type: "alcohol",
-      commissionEligible: true,
-      complimentaryEligible: false,
-    },
-    {
-      name: "Cocktails",
-      type: "alcohol",
-      commissionEligible: true,
-      complimentaryEligible: false,
-    },
-    {
-      name: "Special Commission Drinks",
-      type: "alcohol",
-      commissionEligible: true,
-      complimentaryEligible: false,
-    },
-    {
-      name: "Starters",
-      type: "food",
-      commissionEligible: false,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Main Course",
-      type: "food",
-      commissionEligible: false,
       complimentaryEligible: false,
     },
   ];
@@ -158,98 +122,74 @@ async function main() {
     });
   }
 
+  await prisma.category.updateMany({
+    where: { name: { notIn: categories.map((category) => category.name) } },
+    data: { active: false },
+  });
+
   const categoryByName = new Map(
     (await prisma.category.findMany()).map((category) => [category.name, category]),
   );
 
   const items = [
-    {
-      name: "Kingfisher Beer Bucket",
-      sku: "BEER-BUCKET-KF",
-      categoryName: "Beer",
-      sellingPrice: 120,
-      purchaseCost: 70,
-      stockQuantity: 60,
-      commissionEligible: true,
-    },
-    {
-      name: "Premium Half Bottle",
-      sku: "HALF-PREMIUM",
-      categoryName: "Half Bottle",
-      sellingPrice: 240,
-      purchaseCost: 145,
-      stockQuantity: 35,
-      commissionEligible: true,
-    },
-    {
-      name: "Whisky Full Bottle",
-      sku: "FULL-WHISKY",
-      categoryName: "Full Bottle",
-      sellingPrice: 450,
-      purchaseCost: 280,
-      stockQuantity: 25,
-      commissionEligible: true,
-    },
-    {
-      name: "Gold Cocktail",
-      sku: "COCKTAIL-GOLD",
-      categoryName: "Cocktails",
-      sellingPrice: 90,
-      purchaseCost: 35,
-      stockQuantity: 90,
-      commissionEligible: true,
-    },
-    {
-      name: "VIP Special Drink",
-      sku: "SPECIAL-VIP",
-      categoryName: "Special Commission Drinks",
-      sellingPrice: 200,
-      purchaseCost: 90,
-      stockQuantity: 30,
-      commissionEligible: true,
-      specialCommissionEligible: true,
-    },
-    {
-      name: "Chicken Pakoda",
-      sku: "STARTER-CHICKEN-PAKODA",
-      categoryName: "Starters",
-      sellingPrice: 35,
-      purchaseCost: 12,
-      stockQuantity: 120,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Chicken 65",
-      sku: "STARTER-CHICKEN-65",
-      categoryName: "Starters",
-      sellingPrice: 42,
-      purchaseCost: 16,
-      stockQuantity: 100,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Paneer Tikka",
-      sku: "STARTER-PANEER-TIKKA",
-      categoryName: "Starters",
-      sellingPrice: 38,
-      purchaseCost: 14,
-      stockQuantity: 100,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Veg Biryani",
-      sku: "MAIN-VEG-BIRYANI",
-      categoryName: "Main Course",
-      sellingPrice: 50,
-      purchaseCost: 22,
-      stockQuantity: 80,
-    },
+    { name: "budweiser(24beers)", sku: "INV-BUDWEISER-24BEERS", purchaseCost: 110 },
+    { name: "corona(24beers)", sku: "INV-CORONA-24BEERS", purchaseCost: 140 },
+    { name: "heniken(24beers)", sku: "INV-HENIKEN-24BEERS", purchaseCost: 110 },
+    { name: "kf(12beers)", sku: "INV-KF-12BEERS", purchaseCost: 95 },
+    { name: "ice beer(24beers)", sku: "INV-ICE-BEER-24BEERS", purchaseCost: 140 },
+    { name: "breezer(24)", sku: "INV-BREEZER-24", purchaseCost: 180 },
+    { name: "jd full", sku: "INV-JD-FULL", purchaseCost: 65 },
+    { name: "black label full", sku: "INV-BLACK-LABEL-FULL", purchaseCost: 85 },
+    { name: "red label full", sku: "INV-RED-LABEL-FULL", purchaseCost: 45 },
+    { name: "chivas full", sku: "INV-CHIVAS-FULL", purchaseCost: 80 },
+    { name: "BALLENTINES", sku: "INV-BALLENTINES", purchaseCost: 50 },
+    { name: "blenders pride", sku: "INV-BLENDERS-PRIDE", purchaseCost: 18 },
+    { name: "DOUBLE BLACK", sku: "INV-DOUBLE-BLACK", purchaseCost: 130 },
+    { name: "GLENFIDICH", sku: "INV-GLENFIDICH", purchaseCost: 120 },
+    { name: "THE GLENVLIET", sku: "INV-THE-GLENVLIET", purchaseCost: 132 },
+    { name: "CHIVAS REGAL 18 YEARS", sku: "INV-CHIVAS-REGAL-18-YEARS", purchaseCost: 200 },
+    { name: "gold label full", sku: "INV-GOLD-LABEL-FULL", purchaseCost: 156 },
+    { name: "teachers", sku: "INV-TEACHERS", purchaseCost: 41 },
+    { name: "jaggrmister", sku: "INV-JAGGRMISTER", purchaseCost: 55 },
+    { name: "gordans", sku: "INV-GORDANS", purchaseCost: 50 },
+    { name: "captain morgan dark", sku: "INV-CAPTAIN-MORGAN-DARK", purchaseCost: 85 },
+    { name: "captain morgan gold", sku: "INV-CAPTAIN-MORGAN-GOLD", purchaseCost: 60 },
+    { name: "black label half", sku: "INV-BLACK-LABEL-HALF", purchaseCost: 56 },
+    { name: "red label half", sku: "INV-RED-LABEL-HALF", purchaseCost: 26 },
+    { name: "jd half", sku: "INV-JD-HALF", purchaseCost: 38 },
+    { name: "chivas half", sku: "INV-CHIVAS-HALF", purchaseCost: 50 },
+    { name: "st remy vsop", sku: "INV-ST-REMY-VSOP", purchaseCost: 39 },
+    { name: "hennessy vs", sku: "INV-HENNESSY-VS", purchaseCost: 179 },
+    { name: "willam lawson", sku: "INV-WILLAM-LAWSON", purchaseCost: 44 },
+    { name: "hennessy vsop", sku: "INV-HENNESSY-VSOP", purchaseCost: 0 },
+    { name: "grey goose half", sku: "INV-GREY-GOOSE-HALF", purchaseCost: 0 },
+    { name: "grey goose full", sku: "INV-GREY-GOOSE-FULL", purchaseCost: 0 },
+    { name: "KAHLUA LIQ", sku: "INV-KAHLUA-LIQ", purchaseCost: 80 },
+    { name: "OLD MONK", sku: "INV-OLD-MONK", purchaseCost: 10 },
+    { name: "magic moments", sku: "INV-MAGIC-MOMENTS", purchaseCost: 20 },
+    { name: "absolute full", sku: "INV-ABSOLUTE-FULL", purchaseCost: 39 },
+    { name: "absolute half", sku: "INV-ABSOLUTE-HALF", purchaseCost: 0 },
+    { name: "BOMBAY SAPHARI", sku: "INV-BOMBAY-SAPHARI", purchaseCost: 55 },
+    { name: "JOSE CUERVO SILVER", sku: "INV-JOSE-CUERVO-SILVER", purchaseCost: 45 },
+    { name: "baileys", sku: "INV-BAILEYS", purchaseCost: 78 },
+    { name: "MEMIROVSKAYA", sku: "INV-MEMIROVSKAYA", purchaseCost: 35 },
+    { name: "SILVER PATRON", sku: "INV-SILVER-PATRON", purchaseCost: 180 },
+    { name: "JACOBS CREEK RED", sku: "INV-JACOBS-CREEK-RED", purchaseCost: 50 },
+    { name: "WHITE WINE", sku: "INV-WHITE-WINE", purchaseCost: 50 },
+    { name: "bacardi white", sku: "INV-BACARDI-WHITE", purchaseCost: 50 },
+    { name: "bacardi black", sku: "INV-BACARDI-BLACK", purchaseCost: 60 },
+    { name: "blue curacro", sku: "INV-BLUE-CURACRO", purchaseCost: 45 },
   ];
 
+  await prisma.item.updateMany({
+    where: { sku: { notIn: items.map((item) => item.sku) } },
+    data: { active: false },
+  });
+
   for (const item of items) {
-    const category = categoryByName.get(item.categoryName);
+    const category = categoryByName.get("Inventory");
     if (!category) {
-      throw new Error(`Missing category ${item.categoryName}`);
+      throw new Error("Missing category Inventory");
     }
 
     await prisma.item.upsert({
@@ -257,23 +197,25 @@ async function main() {
       update: {
         name: item.name,
         categoryId: category.id,
-        sellingPriceCents: toCents(item.sellingPrice),
+        sellingPriceCents: 0,
         purchaseCostCents: toCents(item.purchaseCost),
-        stockQuantity: item.stockQuantity,
-        commissionEligible: item.commissionEligible ?? false,
-        specialCommissionEligible: item.specialCommissionEligible ?? false,
-        complimentaryEligible: item.complimentaryEligible ?? false,
+        stockQuantity: 0,
+        commissionEligible: true,
+        specialCommissionEligible: false,
+        complimentaryEligible: false,
+        active: true,
       },
       create: {
         name: item.name,
         sku: item.sku,
         categoryId: category.id,
-        sellingPriceCents: toCents(item.sellingPrice),
+        sellingPriceCents: 0,
         purchaseCostCents: toCents(item.purchaseCost),
-        stockQuantity: item.stockQuantity,
-        commissionEligible: item.commissionEligible ?? false,
-        specialCommissionEligible: item.specialCommissionEligible ?? false,
-        complimentaryEligible: item.complimentaryEligible ?? false,
+        stockQuantity: 0,
+        commissionEligible: true,
+        specialCommissionEligible: false,
+        complimentaryEligible: false,
+        active: true,
       },
     });
   }
@@ -368,68 +310,7 @@ async function main() {
     },
   });
 
-  const starterItems = await prisma.item.findMany({
-    where: { category: { name: "Starters" } },
-  });
-
-  const offerConfigs = [
-    {
-      name: "Beer Bucket = 1 Free Starter",
-      buyCategoryName: "Beer",
-      buyQuantity: 1,
-      freeQuantity: 1,
-    },
-    {
-      name: "Half Bottle = 1 Free Starter",
-      buyCategoryName: "Half Bottle",
-      buyQuantity: 1,
-      freeQuantity: 1,
-    },
-    {
-      name: "Full Bottle = 2 Free Starters",
-      buyCategoryName: "Full Bottle",
-      buyQuantity: 1,
-      freeQuantity: 2,
-    },
-  ];
-
-  for (const offerConfig of offerConfigs) {
-    const buyCategory = categoryByName.get(offerConfig.buyCategoryName);
-    const freeCategory = categoryByName.get("Starters");
-    if (!buyCategory || !freeCategory) {
-      throw new Error(`Missing offer category for ${offerConfig.name}`);
-    }
-
-    const existingOffer = await prisma.offer.findFirst({
-      where: { name: offerConfig.name },
-    });
-    const offerData = {
-      buyCategoryId: buyCategory.id,
-      buyQuantity: offerConfig.buyQuantity,
-      freeCategoryId: freeCategory.id,
-      freeQuantity: offerConfig.freeQuantity,
-      active: true,
-      managerApprovalRequired: false,
-      waiterCanChooseFreeItem: true,
-    };
-
-    const offer = existingOffer
-      ? await prisma.offer.update({
-          where: { id: existingOffer.id },
-          data: offerData,
-        })
-      : await prisma.offer.create({
-          data: { name: offerConfig.name, ...offerData },
-        });
-
-    await prisma.offerEligibleItem.deleteMany({ where: { offerId: offer.id } });
-    await prisma.offerEligibleItem.createMany({
-      data: starterItems.map((item) => ({
-        offerId: offer.id,
-        itemId: item.id,
-      })),
-    });
-  }
+  await prisma.offer.updateMany({ data: { active: false } });
 
   const expenseCategories = [
     "Staff food",

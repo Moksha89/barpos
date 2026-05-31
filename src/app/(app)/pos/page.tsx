@@ -19,7 +19,7 @@ export default async function PosPage({
       orderBy: { name: "asc" },
     }),
     prisma.item.findMany({
-      where: { active: true },
+      where: { active: true, sellingPriceCents: { gt: 0 } },
       orderBy: { name: "asc" },
     }),
     prisma.staff.findMany({

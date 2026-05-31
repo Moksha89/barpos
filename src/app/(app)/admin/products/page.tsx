@@ -19,10 +19,11 @@ export const dynamic = "force-dynamic";
 export default async function ProductsPage() {
   await requirePermission("products.manage");
   const [categories, items, inventoryTransactions] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.category.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     prisma.item.findMany({
       include: { category: true },
       orderBy: { createdAt: "desc" },
+      where: { active: true },
     }),
     prisma.inventoryTransaction.findMany({
       include: { item: true },
@@ -104,7 +105,7 @@ export default async function ProductsPage() {
 
         </div>
 
-        <AdminCard title="Add Item" description="Create new POS sale item with price, cost, stock and commission flags.">
+        <AdminCard title="Add Item" description="Create inventory items with purchase price now; selling prices can be added later.">
           <form action={createItem} className="grid gap-3">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Item name">
@@ -126,7 +127,7 @@ export default async function ProductsPage() {
                 <TextInput name="unitType" defaultValue="pcs" required />
               </Field>
               <Field label="Selling price">
-                <TextInput name="sellingPrice" type="number" min="0" step="0.01" required />
+                <TextInput name="sellingPrice" type="number" min="0" step="0.01" defaultValue="0" required />
               </Field>
               <Field label="Purchase cost">
                 <TextInput name="purchaseCost" type="number" min="0" step="0.01" required />
@@ -171,7 +172,6 @@ export default async function ProductsPage() {
                 <tr>
                   <th>Item</th>
                   <th>Category</th>
-                  <th className="currency-cell">Sell</th>
                   <th className="currency-cell">Cost</th>
                   <th>Stock</th>
                   <th>Flags</th>
@@ -182,7 +182,6 @@ export default async function ProductsPage() {
                   <tr key={item.id}>
                     <td className="font-bold">{item.name}</td>
                     <td>{item.category.name}</td>
-                    <td className="currency-cell font-bold">{formatCurrency(item.sellingPriceCents)}</td>
                     <td className="currency-cell">{formatCurrency(item.purchaseCostCents)}</td>
                     <td>{item.stockQuantity} {item.unitType}</td>
                     <td>
@@ -207,7 +206,7 @@ export default async function ProductsPage() {
                     <p className="font-black">{item.name}</p>
                     <p className="text-xs text-stone-500">{item.category.name} · {item.stockQuantity} {item.unitType}</p>
                   </div>
-                  <b className="text-[var(--color-gold-dark)]">{formatCurrency(item.sellingPriceCents)}</b>
+                  <b className="text-[var(--color-gold-dark)]">{formatCurrency(item.purchaseCostCents)}</b>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.commissionEligible ? <StatusBadge tone="gold">commission</StatusBadge> : null}

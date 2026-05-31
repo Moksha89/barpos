@@ -25,7 +25,10 @@ export default async function OffersPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
-    prisma.item.findMany({ orderBy: { name: "asc" } }),
+    prisma.item.findMany({
+      where: { active: true, sellingPriceCents: { gt: 0 } },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (
