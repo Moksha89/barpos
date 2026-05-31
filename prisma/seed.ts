@@ -107,12 +107,144 @@ async function main() {
 
   const categories = [
     {
-      name: "Inventory",
+      name: "Champagne & Sparkling Wine",
       type: "alcohol",
       commissionEligible: true,
       complimentaryEligible: false,
     },
-  ];
+    {
+      name: "Wine",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Draught Beer",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Bottle Beer",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Brandy & Cognac",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Vodka",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Rum",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Gin",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Tequila",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Whisky",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Liqueurs",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Cocktails",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Shooters",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Rice & Biryani",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Fried Rice & Noodles",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Seafood Starters",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Breads",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Fresh Juices",
+      type: "beverage",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Veg Starters",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Veg Main Course",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Fruit Platter",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Non Veg Starters",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Non Veg Main Course",
+      type: "food",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+  ] as const;
 
   for (const category of categories) {
     await prisma.category.upsert({
@@ -392,10 +524,160 @@ async function main() {
     data: { active: false },
   });
 
+  type CategoryName = (typeof categories)[number]["name"];
+  type MenuItem = (typeof items)[number];
+
+  function categoryNameForItem(item: MenuItem): CategoryName {
+    const sku = item.sku;
+
+    if (sku.includes("LANSON") || sku.includes("SPARKLING")) return "Champagne & Sparkling Wine";
+    if (
+      sku.includes("SHIRAZ") ||
+      sku.includes("RED-WINE") ||
+      sku.includes("CHARDONNAY") ||
+      sku.includes("WHITE-WINE") ||
+      sku.includes("MATEUS")
+    ) return "Wine";
+    if (sku.includes("DRAUGHT-BEER")) return "Draught Beer";
+    if (
+      sku.includes("BUDWEISER") ||
+      sku.includes("HEINEKEN") ||
+      sku.includes("CORONA") ||
+      sku.includes("KING-FISHER")
+    ) return "Bottle Beer";
+    if (
+      sku.includes("ST-REMY") ||
+      sku.includes("HENNESSY") ||
+      sku.includes("REMY-MARTIN")
+    ) return "Brandy & Cognac";
+    if (sku.includes("ABSOLUT") || sku.includes("SMIRNOFF") || sku.includes("GREY-GOOSE")) return "Vodka";
+    if (sku.includes("BACARDI") || sku.includes("CAPTAIN-MORGAN") || sku.includes("MALIBU")) return "Rum";
+    if (sku.includes("GORDONS") || sku.includes("BOMBAY-SAPPHIRE")) return "Gin";
+    if (sku.includes("JOSE-CUERVO")) return "Tequila";
+    if (
+      sku.includes("BALLANTINES") ||
+      sku.includes("RED-LABEL") ||
+      sku.includes("JB-RARE") ||
+      sku.includes("CANADIAN-CLUB") ||
+      sku.includes("JAMESON") ||
+      sku.includes("CHIVAS-REGAL") ||
+      sku.includes("JACK-DANIELS") ||
+      sku.includes("BLACK-LABEL") ||
+      sku.includes("DOUBLE-BLACK") ||
+      sku.includes("JIM-BEAM") ||
+      sku.includes("BLUE-LABEL") ||
+      sku.includes("ROYAL-SALUTE") ||
+      sku.includes("GLENFIDDICH")
+    ) return "Whisky";
+    if (
+      sku.includes("BAILEYS") ||
+      sku.includes("COINTREAU") ||
+      sku.includes("KAHLUA") ||
+      sku.includes("PEACH-SCHNAPPS") ||
+      sku.includes("TRIPLE-SEC") ||
+      sku.includes("SAMBUCA") ||
+      sku.includes("JAGERMEISTER")
+    ) return "Liqueurs";
+    if (
+      sku.includes("LONG-ISLAND") ||
+      sku.includes("BULL-FROG") ||
+      sku.includes("SEX-ON-THE-BEACH") ||
+      sku.includes("MARGARITA") ||
+      sku.includes("PINA-COLADA") ||
+      sku.includes("COSMOPOLITAN") ||
+      sku.includes("MOJITO") ||
+      sku.includes("TEQUILA-SUNRISE") ||
+      sku.includes("JAGER-BOMB") ||
+      sku.includes("BLACK-RUSSIAN")
+    ) return "Cocktails";
+    if (
+      sku.includes("KAMIKAZE") ||
+      sku.includes("B-52") ||
+      sku.includes("BRAIN-DAMAGE") ||
+      sku.includes("FLAT-LINER")
+    ) return "Shooters";
+    if (
+      sku.includes("GHEE-RICE") ||
+      sku.includes("JEERA-RICE") ||
+      sku.includes("CURD-RICE") ||
+      sku.includes("BIRYANI")
+    ) return "Rice & Biryani";
+    if (sku.includes("FRIED-RICE") || sku.includes("NOODLES")) return "Fried Rice & Noodles";
+    if (
+      sku.includes("APOLLO-FISH") ||
+      sku.includes("CHILLI-FISH") ||
+      sku.includes("KING-FISH") ||
+      sku.includes("TAWA-FISH-FRY") ||
+      sku.includes("LOOSE-PRAWNS") ||
+      sku.includes("CHILLI-PRAWNS") ||
+      sku.includes("GHEE-ROAST-PRAWNS-FRY")
+    ) return "Seafood Starters";
+    if (
+      sku.includes("CHAPATI") ||
+      sku.includes("PULKA") ||
+      sku.includes("PAROTTA") ||
+      sku.includes("ROTI") ||
+      sku.includes("DOSA-SET")
+    ) return "Breads";
+    if (sku.includes("JUICE") || sku.includes("LASSI")) return "Fresh Juices";
+    if (
+      sku.includes("MUSHROOM-PEPPER-FRY") ||
+      sku.includes("CHILLI-MUSHROOM") ||
+      sku.includes("CHILLI-PANEER") ||
+      sku.includes("PANEER-65") ||
+      sku.includes("PANEER-PEPPER-FRY") ||
+      sku.includes("GOBI") ||
+      sku.includes("VEG-PAKODA") ||
+      sku.includes("FRENCH-FRIES") ||
+      sku.includes("PEANUT-MASALA") ||
+      sku.includes("CRISPY-CORN") ||
+      sku.includes("MIX-PAKODI") ||
+      sku.includes("PEPPER-PANEER-FRY")
+    ) return "Veg Starters";
+    if (
+      sku.includes("DAL-TADKA") ||
+      sku.includes("KAJU-TOMATO") ||
+      sku.includes("PANEER-BUTTER-MASALA") ||
+      sku.includes("KADAI-PANEER") ||
+      sku.includes("PALAK-PANEER") ||
+      sku.includes("MUSHROOM-MASALA")
+    ) return "Veg Main Course";
+    if (sku.includes("FRUIT-PLATTER")) return "Fruit Platter";
+    if (
+      sku.includes("CHICKEN-65") ||
+      sku.includes("GUNTUR-CHICKEN-FRY") ||
+      sku.includes("KAJU-CHICKEN") ||
+      sku.includes("CHILLI-CHICKEN") ||
+      sku.includes("CHICKEN-LOLLIPOP") ||
+      sku.includes("KAJU-MUTTON-FRY") ||
+      sku.includes("PEPPER-MUTTON-FRY") ||
+      sku.includes("HYDERABADI-STYLE-KADAK-MUTTON-FRY") ||
+      sku.includes("DOUBLE-EGG-OMELETTE") ||
+      sku.includes("CHILLI-EGG") ||
+      sku.includes("EGG-BHURJI") ||
+      sku.includes("BEEF-ROAST") ||
+      sku.includes("CHILLI-BEEF") ||
+      sku.includes("BEEF-COCONUT")
+    ) return "Non Veg Starters";
+    if (
+      sku.includes("EGG-MASALA") ||
+      sku.includes("CHICKEN-CURRY") ||
+      sku.includes("BUTTER-CHICKEN-MASALA") ||
+      sku.includes("NATU-KODI-CURRY") ||
+      sku.includes("TELANGANA-CHICKEN-CURRY") ||
+      sku.includes("MUTTON-CURRY") ||
+      sku.includes("BEEF-MASALA") ||
+      sku.includes("PRAWNS-CURRY")
+    ) return "Non Veg Main Course";
+
+    throw new Error(`Missing menu category for ${item.name}`);
+  }
+
   for (const item of items) {
-    const category = categoryByName.get("Inventory");
+    const categoryName = categoryNameForItem(item);
+    const category = categoryByName.get(categoryName);
     if (!category) {
-      throw new Error("Missing category Inventory");
+      throw new Error(`Missing category ${categoryName}`);
     }
 
     await prisma.item.upsert({
