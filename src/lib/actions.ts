@@ -179,6 +179,33 @@ export async function createItem(formData: FormData) {
   revalidatePath("/admin/products");
 }
 
+export async function updateItem(formData: FormData) {
+  await requirePermission("products.manage");
+  const itemId = formString(formData, "itemId");
+  const item = await prisma.item.update({
+    where: { id: itemId },
+    data: {
+      name: formString(formData, "name"),
+      sku: formOptionalString(formData, "sku"),
+      categoryId: formString(formData, "categoryId"),
+      sellingPriceCents: toCents(formNumber(formData, "sellingPrice")),
+      purchaseCostCents: toCents(formNumber(formData, "purchaseCost")),
+      unitType: formString(formData, "unitType") || "pcs",
+      taxPercent: formNumber(formData, "taxPercent"),
+      commissionEligible: formBoolean(formData, "commissionEligible"),
+      specialCommissionEligible: formBoolean(
+        formData,
+        "specialCommissionEligible",
+      ),
+      complimentaryEligible: formBoolean(formData, "complimentaryEligible"),
+      active: formBoolean(formData, "active"),
+    },
+  });
+  await audit(AuditAction.SETTINGS_UPDATED, "Item", item.id);
+  revalidatePath("/admin/products");
+  revalidatePath("/pos");
+}
+
 export async function createInventoryPurchase(formData: FormData) {
   await requirePermission("products.manage");
   const itemId = formString(formData, "itemId");
@@ -197,6 +224,41 @@ export async function createInventoryPurchase(formData: FormData) {
         itemId,
         type: "PURCHASE",
         quantityChange: quantity,
+        unitCostCents,
+        totalCostCents,
+        notes,
+      },
+    });
+  });
+
+  await audit(AuditAction.SETTINGS_UPDATED, "InventoryTransaction", itemId);
+  revalidatePath("/admin/products");
+  revalidatePath("/reports");
+}
+
+export async function adjustInventoryStock(formData: FormData) {
+  await requirePermission("products.manage");
+  const itemId = formString(formData, "itemId");
+  const direction = formString(formData, "direction");
+  const quantity = formNumber(formData, "quantity");
+  const unitCostCents = toCents(formNumber(formData, "unitCost"));
+  const notes = formOptionalString(formData, "notes") ?? "Stock adjustment";
+  if (quantity <= 0) {
+    throw new Error("Quantity must be greater than zero");
+  }
+  const quantityChange = direction === "OUT" ? -quantity : quantity;
+  const totalCostCents = Math.round(unitCostCents * Math.abs(quantityChange));
+
+  await prisma.$transaction(async (tx) => {
+    await tx.item.update({
+      where: { id: itemId },
+      data: { stockQuantity: { increment: quantityChange } },
+    });
+    await tx.inventoryTransaction.create({
+      data: {
+        itemId,
+        type: direction === "OUT" ? "ADJUSTMENT" : "PURCHASE",
+        quantityChange,
         unitCostCents,
         totalCostCents,
         notes,
