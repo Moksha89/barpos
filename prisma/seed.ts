@@ -281,9 +281,13 @@ async function main() {
 
     // Bottle beers
     { name: "Budweiser Bottle", sku: "MENU-BUDWEISER-BOTTLE", purchaseCost: 4.58, sellingPrice: 25, unitType: "bottle" },
+    { name: "Budweiser Bucket (5 Beers)", sku: "MENU-BUDWEISER-BUCKET-5", purchaseCost: 22.9, sellingPrice: 125, unitType: "bucket" },
     { name: "Heineken Bottle", sku: "MENU-HEINEKEN-BOTTLE", purchaseCost: 4.58, sellingPrice: 25, unitType: "bottle" },
+    { name: "Heineken Bucket (5 Beers)", sku: "MENU-HEINEKEN-BUCKET-5", purchaseCost: 22.9, sellingPrice: 125, unitType: "bucket" },
     { name: "Corona Bottle", sku: "MENU-CORONA-BOTTLE", purchaseCost: 5.83, sellingPrice: 32, unitType: "bottle" },
+    { name: "Corona Bucket (5 Beers)", sku: "MENU-CORONA-BUCKET-5", purchaseCost: 29.15, sellingPrice: 160, unitType: "bucket" },
     { name: "King Fisher Bottle", sku: "MENU-KING-FISHER-BOTTLE", purchaseCost: 7.92, sellingPrice: 45, unitType: "bottle" },
+    { name: "King Fisher Bucket (5 Beers)", sku: "MENU-KING-FISHER-BUCKET-5", purchaseCost: 39.6, sellingPrice: 225, unitType: "bucket" },
 
     // Brandy / cognac — 30ml / half / full
     { name: "St-Rémy 30ml", sku: "MENU-ST-REMY-30ML", purchaseCost: 1.56, sellingPrice: 30, unitType: "peg" },
@@ -711,6 +715,17 @@ async function main() {
     });
   }
 
+  await prisma.item.updateMany({
+    where: {
+      category: {
+        name: {
+          in: ["Seafood Starters", "Veg Starters", "Non Veg Starters"],
+        },
+      },
+    },
+    data: { complimentaryEligible: true },
+  });
+
   const staffConfigs = [
     {
       name: "Priya",
@@ -734,7 +749,7 @@ async function main() {
       phone: "9000000003",
       fixedSalary: 1800,
       normalCommissionPercent: 10,
-      specialCommissionPercent: 25,
+      specialCommissionPercent: 50,
     },
   ];
 

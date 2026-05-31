@@ -19,6 +19,7 @@ type PosItem = {
   sellingPriceCents: number;
   purchaseCostCents: number;
   stockQuantity: number;
+  unitType: string;
   commissionEligible: boolean;
   specialCommissionEligible: boolean;
   complimentaryEligible: boolean;
@@ -28,7 +29,6 @@ type PosStaff = {
   id: string;
   name: string;
   normalCommissionPercent: number;
-  specialCommissionPercent: number;
 };
 
 type PosOffer = {
@@ -39,6 +39,14 @@ type PosOffer = {
   buyQuantity: number;
   freeQuantity: number;
   eligibleFreeItems: { item: PosItem }[];
+};
+
+type StarterRule = {
+  id: string;
+  name: string;
+  freeQuantity: number;
+  eligibleFreeItems: { item: PosItem }[];
+  appliesTo: (item: PosItem, quantity: number) => boolean;
 };
 
 type CartLine = {
@@ -152,7 +160,57 @@ export function PosBillingClient({
   const paid = payments.reduce((total, payment) => total + payment.amount, 0);
 
   const eligibleOffers = useMemo(() => {
-    return offers
+    const starterItems = items
+      .filter((item) => item.complimentaryEligible)
+      .map((item) => ({ item }));
+    const starterRules: StarterRule[] = [
+      {
+        id: "half-bottle-starter",
+        name: "Half bottle = 1 free starter",
+        freeQuantity: 1,
+        eligibleFreeItems: starterItems,
+        appliesTo: (item) => item.unitType.toLowerCase() === "half",
+      },
+      {
+        id: "full-bottle-starter",
+        name: "Full bottle = 2 free starters",
+        freeQuantity: 2,
+        eligibleFreeItems: starterItems,
+        appliesTo: (item) => item.unitType.toLowerCase() === "full",
+      },
+      {
+        id: "beer-bucket-starter",
+        name: "Bucket of 5 beers = 1 free starter",
+        freeQuantity: 1,
+        eligibleFreeItems: starterItems,
+        appliesTo: (item, quantity) =>
+          (item.unitType.toLowerCase() === "bucket" || quantity >= 5) &&
+          (categoryById.get(item.categoryId)?.name.toLowerCase().includes("beer") ?? false),
+      },
+    ];
+    const systemOffers = starterRules
+      .map((offer) => {
+        const allowed = cart
+          .filter((line) => !line.isComplimentary)
+          .reduce((total, line) => {
+            if (!offer.appliesTo(line.item, line.quantity)) {
+              return total;
+            }
+            if (offer.id === "beer-bucket-starter") {
+              if (line.item.unitType.toLowerCase() === "bucket") {
+                return total + line.quantity * offer.freeQuantity;
+              }
+              return total + Math.floor(line.quantity / 5) * offer.freeQuantity;
+            }
+            return total + Math.trunc(line.quantity) * offer.freeQuantity;
+          }, 0);
+        const used = cart
+          .filter((line) => line.isComplimentary && line.offerId === offer.id)
+          .reduce((total, line) => total + line.quantity, 0);
+        return { offer, remaining: Math.max(allowed - used, 0) };
+      })
+      .filter((entry) => entry.remaining > 0 && entry.offer.eligibleFreeItems.length > 0);
+    const configuredOffers = offers
       .map((offer) => {
         const boughtQuantity = cart
           .filter(
@@ -169,7 +227,8 @@ export function PosBillingClient({
         return { offer, remaining: Math.max(allowed - used, 0) };
       })
       .filter((entry) => entry.remaining > 0);
-  }, [cart, offers]);
+    return [...systemOffers, ...configuredOffers];
+  }, [cart, categoryById, items, offers]);
 
   const addItem = (item: PosItem) => {
     setCart((current) => {
@@ -193,7 +252,7 @@ export function PosBillingClient({
     });
   };
 
-  const addComplimentary = (offer: PosOffer, item: PosItem) => {
+  const addComplimentary = (offer: Pick<PosOffer, "id" | "name">, item: PosItem) => {
     setCart((current) => [
       ...current,
       {
@@ -281,7 +340,7 @@ export function PosBillingClient({
             >
               {staff.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.name} · {member.normalCommissionPercent}% / {member.specialCommissionPercent}%
+                  {member.name} · {member.normalCommissionPercent}% / special 50%
                 </option>
               ))}
             </select>

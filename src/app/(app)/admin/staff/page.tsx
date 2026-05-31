@@ -8,7 +8,7 @@ import {
   SubmitButton,
   TextInput,
 } from "@/components/form-controls";
-import { createStaff } from "@/lib/actions";
+import { createStaff, updateStaffCommission } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/money";
@@ -28,8 +28,8 @@ export default async function StaffPage() {
           </p>
           <h1 className="mt-2 text-2xl font-black">Staff & Waitress Profiles</h1>
           <p className="mt-2 text-stone-600">
-            Configure salary, normal commission, special drink commission, roles,
-            and active status.
+            Configure employees and each waitress&apos;s normal commission slab.
+            Special-drink commission is fixed at 50% for all staff.
           </p>
         </header>
 
@@ -56,7 +56,7 @@ export default async function StaffPage() {
                 <TextInput name="normalCommissionPercent" type="number" min="0" step="0.01" defaultValue="0" />
               </Field>
               <Field label="Special drink commission %">
-                <TextInput name="specialCommissionPercent" type="number" min="0" step="0.01" defaultValue="0" />
+                <TextInput disabled value="50" />
               </Field>
             </div>
             <Checkbox name="active" label="Active" />
@@ -85,9 +85,25 @@ export default async function StaffPage() {
                   </div>
                   <div>
                     <p className="text-stone-500">Special</p>
-                    <p className="font-bold">{member.specialCommissionPercent}%</p>
+                    <p className="font-bold">50%</p>
                   </div>
                 </div>
+                <form action={updateStaffCommission} className="mt-4 grid gap-2 rounded-2xl bg-stone-50 p-3">
+                  <input name="staffId" type="hidden" value={member.id} />
+                  <Field label="Normal commission slab %">
+                    <TextInput
+                      name="normalCommissionPercent"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      defaultValue={member.normalCommissionPercent}
+                    />
+                  </Field>
+                  <p className="text-xs font-semibold text-stone-500">
+                    Special drinks stay fixed at 50% for everyone.
+                  </p>
+                  <SubmitButton>Save commission</SubmitButton>
+                </form>
               </article>
             ))}
           </div>

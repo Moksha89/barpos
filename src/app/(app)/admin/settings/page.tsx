@@ -12,6 +12,7 @@ import {
   updateDayPasscode,
   updateInvoiceSettings,
   updatePrinterSettings,
+  updateStaffCommission,
   updateUserPassword,
 } from "@/lib/actions";
 import { requirePermission } from "@/lib/auth";
@@ -92,7 +93,7 @@ export default async function SettingsPage() {
                   <TextInput name="normalCommissionPercent" type="number" min="0" step="0.01" defaultValue="0" />
                 </Field>
                 <Field label="Special drink %">
-                  <TextInput name="specialCommissionPercent" type="number" min="0" step="0.01" defaultValue="0" />
+                  <TextInput disabled value="50" />
                 </Field>
               </div>
               <Checkbox name="active" label="Active" />
@@ -136,8 +137,21 @@ export default async function SettingsPage() {
                 <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                   <div><p className="text-xs text-stone-500">Salary</p><b>AED {(member.fixedSalaryCents / 100).toLocaleString("en-AE")}</b></div>
                   <div><p className="text-xs text-stone-500">Normal</p><b>{member.normalCommissionPercent}%</b></div>
-                  <div><p className="text-xs text-stone-500">Special</p><b>{member.specialCommissionPercent}%</b></div>
+                  <div><p className="text-xs text-stone-500">Special</p><b>50%</b></div>
                 </div>
+                <form action={updateStaffCommission} className="mt-3 grid gap-2">
+                  <input name="staffId" type="hidden" value={member.id} />
+                  <Field label="Normal commission %">
+                    <TextInput
+                      name="normalCommissionPercent"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      defaultValue={member.normalCommissionPercent}
+                    />
+                  </Field>
+                  <SubmitButton>Save commission</SubmitButton>
+                </form>
               </article>
             ))}
           </div>

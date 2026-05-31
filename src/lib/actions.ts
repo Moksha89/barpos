@@ -260,10 +260,7 @@ export async function createStaff(formData: FormData) {
       phone: formOptionalString(formData, "phone"),
       fixedSalaryCents: toCents(formNumber(formData, "fixedSalary")),
       normalCommissionPercent: formNumber(formData, "normalCommissionPercent"),
-      specialCommissionPercent: formNumber(
-        formData,
-        "specialCommissionPercent",
-      ),
+      specialCommissionPercent: 50,
       active: formBoolean(formData, "active"),
     },
   });
@@ -271,6 +268,24 @@ export async function createStaff(formData: FormData) {
   revalidatePath("/admin/staff");
   revalidatePath("/admin/settings");
   revalidatePath("/reports");
+}
+
+export async function updateStaffCommission(formData: FormData) {
+  await requirePermission("staff.manage");
+  const staffId = formString(formData, "staffId");
+  const staff = await prisma.staff.update({
+    where: { id: staffId },
+    data: {
+      normalCommissionPercent: formNumber(formData, "normalCommissionPercent"),
+      specialCommissionPercent: 50,
+    },
+  });
+  await audit(AuditAction.COMMISSION_CHANGED, "Staff", staff.id);
+  revalidatePath("/admin/staff");
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/commission");
+  revalidatePath("/reports");
+  revalidatePath(`/reports/staff/${staff.id}`);
 }
 
 export async function updateUserPassword(formData: FormData) {
@@ -603,7 +618,6 @@ export async function createPosOrder(formData: FormData) {
       eligibleSalesCents,
       specialDrinkSalesCents,
       normalCommissionPercent: staff.normalCommissionPercent,
-      specialCommissionPercent: staff.specialCommissionPercent,
     });
 
     const netSalesCents = subtotalCents - cappedDiscountCents + taxCents;
@@ -934,7 +948,7 @@ export async function createStaffSettlement(formData: FormData) {
         normalSalesCents,
         specialDrinkSalesCents,
         normalCommissionPercent: staff.normalCommissionPercent,
-        specialCommissionPercent: staff.specialCommissionPercent,
+        specialCommissionPercent: 50,
         normalCommissionCents,
         specialCommissionCents,
         totalCommissionCents,

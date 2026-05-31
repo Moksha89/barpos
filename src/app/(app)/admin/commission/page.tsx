@@ -67,7 +67,7 @@ export default async function CommissionPage({
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">Admin</p>
             <h1 className="mt-1 text-lg font-black sm:text-2xl">Commission Rules</h1>
-            <p className="mt-1 text-sm text-stone-600">Configure rates and filter earned commission by date.</p>
+            <p className="mt-1 text-sm text-stone-600">Waitress normal rates are managed in Staff. Special drinks are fixed at 50%.</p>
           </div>
           <DateRangeFilter startDate={range.startDate} endDate={range.endDate} />
         </header>
@@ -112,7 +112,7 @@ export default async function CommissionPage({
                 <TextInput name="normalCommissionPercent" type="number" min="0" step="0.01" required />
               </Field>
               <Field label="Special commission %">
-                <TextInput name="specialCommissionPercent" type="number" min="0" step="0.01" required />
+                <TextInput name="specialCommissionPercent" type="number" min="0" step="0.01" defaultValue="50" required />
               </Field>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">
@@ -150,7 +150,7 @@ export default async function CommissionPage({
               <article key={rule.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
                 <h2 className="font-black">{rule.name}</h2>
                 <p className="mt-1 text-sm text-stone-600">
-                  Staff: {rule.staff?.name ?? "Default"} · Normal {rule.normalCommissionPercent}% · Special {rule.specialCommissionPercent}%
+                  Staff: {rule.staff?.name ?? "Default"} · Normal {rule.normalCommissionPercent}% · Special 50% fixed
                 </p>
                 <p className="mt-2 text-xs text-stone-500">
                   Categories: {rule.categories.map((entry) => entry.category.name).join(", ") || "none"} · Items: {rule.items.map((entry) => entry.item.name).join(", ") || "none"}

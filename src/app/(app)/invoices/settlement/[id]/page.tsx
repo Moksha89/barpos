@@ -48,7 +48,7 @@ export default async function SettlementReceiptPage({
           <div className="flex justify-between"><span>Normal Sales</span><b>{formatCurrency(settlement.normalSalesCents)}</b></div>
           <div className="flex justify-between"><span>Normal Commission @ {settlement.normalCommissionPercent}%</span><b>{formatCurrency(settlement.normalCommissionCents)}</b></div>
           <div className="flex justify-between"><span>Special Drink Sales</span><b>{formatCurrency(settlement.specialDrinkSalesCents)}</b></div>
-          <div className="flex justify-between"><span>Special Commission @ {settlement.specialCommissionPercent}%</span><b>{formatCurrency(settlement.specialCommissionCents)}</b></div>
+          <div className="flex justify-between"><span>Special Commission @ 50%</span><b>{formatCurrency(settlement.specialCommissionCents)}</b></div>
           <div className="flex justify-between border-t pt-2"><span>Total Commission</span><b>{formatCurrency(settlement.totalCommissionCents)}</b></div>
           <div className="flex justify-between"><span>Tips</span><b>{formatCurrency(settlement.tipsCents)}</b></div>
           <div className="flex justify-between"><span>Previous Pending</span><b>{formatCurrency(settlement.previousPendingCents)}</b></div>

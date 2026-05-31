@@ -66,7 +66,7 @@ export default async function StaffReportPage({
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--color-gold-dark)]">Waitress detail</p>
             <h1 className="mt-1 text-xl font-black sm:text-2xl">{staff.name}</h1>
-            <p className="mt-1 text-sm text-stone-600">Normal {staff.normalCommissionPercent}% · Special drinks {staff.specialCommissionPercent}% · tables, amounts, commissions, tips, advances and payouts.</p>
+            <p className="mt-1 text-sm text-stone-600">Normal {staff.normalCommissionPercent}% · Special drinks 50% fixed · tables, amounts, commissions, tips, advances and payouts.</p>
           </div>
           <DateRangeFilter startDate={range.startDate} endDate={range.endDate} />
         </header>

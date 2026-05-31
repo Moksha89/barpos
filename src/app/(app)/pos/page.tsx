@@ -65,7 +65,18 @@ export default async function PosPage({
             isComplimentary: line.isComplimentary,
             offerId: line.offerId,
             complimentaryReason: line.complimentaryReason,
-            item: line.item,
+            item: {
+              id: line.item.id,
+              name: line.item.name,
+              categoryId: line.item.categoryId,
+              sellingPriceCents: line.item.sellingPriceCents,
+              purchaseCostCents: line.item.purchaseCostCents,
+              stockQuantity: line.item.stockQuantity,
+              unitType: line.item.unitType,
+              commissionEligible: line.item.commissionEligible,
+              specialCommissionEligible: line.item.specialCommissionEligible,
+              complimentaryEligible: line.item.complimentaryEligible,
+            },
           })),
         })),
       }
@@ -114,9 +125,45 @@ export default async function PosPage({
       ) : (
         <PosBillingClient
           categories={categories}
-          items={items}
-          staff={staff}
-          offers={offers}
+          items={items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            categoryId: item.categoryId,
+            sellingPriceCents: item.sellingPriceCents,
+            purchaseCostCents: item.purchaseCostCents,
+            stockQuantity: item.stockQuantity,
+            unitType: item.unitType,
+            commissionEligible: item.commissionEligible,
+            specialCommissionEligible: item.specialCommissionEligible,
+            complimentaryEligible: item.complimentaryEligible,
+          }))}
+          staff={staff.map((member) => ({
+            id: member.id,
+            name: member.name,
+            normalCommissionPercent: member.normalCommissionPercent,
+          }))}
+          offers={offers.map((offer) => ({
+            id: offer.id,
+            name: offer.name,
+            buyItemId: offer.buyItemId,
+            buyCategoryId: offer.buyCategoryId,
+            buyQuantity: offer.buyQuantity,
+            freeQuantity: offer.freeQuantity,
+            eligibleFreeItems: offer.eligibleFreeItems.map((entry) => ({
+              item: {
+                id: entry.item.id,
+                name: entry.item.name,
+                categoryId: entry.item.categoryId,
+                sellingPriceCents: entry.item.sellingPriceCents,
+                purchaseCostCents: entry.item.purchaseCostCents,
+                stockQuantity: entry.item.stockQuantity,
+                unitType: entry.item.unitType,
+                commissionEligible: entry.item.commissionEligible,
+                specialCommissionEligible: entry.item.specialCommissionEligible,
+                complimentaryEligible: entry.item.complimentaryEligible,
+              },
+            })),
+          }))}
           paymentMethods={paymentMethods}
           table={tableContext}
         />

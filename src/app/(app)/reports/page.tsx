@@ -104,7 +104,6 @@ export default async function ReportsPage({
       id: member.id,
       name: member.name,
       normalPercent: member.normalCommissionPercent,
-      specialPercent: member.specialCommissionPercent,
       advances: staffAdvances.reduce((total, advance) => total + advance.amountCents, 0),
       payouts: staffSettlements.reduce((total, settlement) => total + settlement.amountPaidCents, 0),
       settlements: staffSettlements.length,
@@ -210,7 +209,7 @@ export default async function ReportsPage({
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-base font-black">{row.name}</p>
-                        <p className="mt-1 text-xs font-bold text-stone-500">Normal {row.normalPercent}% · Special {row.specialPercent}%</p>
+                        <p className="mt-1 text-xs font-bold text-stone-500">Normal {row.normalPercent}% · Special 50%</p>
                       </div>
                       <ChevronRight className="h-5 w-5 text-[var(--color-gold-dark)]" />
                     </div>
@@ -232,7 +231,7 @@ export default async function ReportsPage({
                   <thead><tr><th>Waitress</th><th>%</th><th>Bills</th><th className="currency-cell">Sales</th><th className="currency-cell">Commission</th><th className="currency-cell">Tips</th><th className="currency-cell">Advances</th><th className="currency-cell">Payouts</th></tr></thead>
                   <tbody>
                     {staffRows.sort((a, b) => b.commission - a.commission).map((row) => (
-                      <tr key={row.id}><td className="font-bold"><Link className="hover:text-[var(--color-gold-dark)]" href={`/reports/staff/${row.id}?startDate=${range.startDate}&endDate=${range.endDate}`}>{row.name}</Link></td><td>{row.normalPercent}% / {row.specialPercent}%</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell font-black">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td><td className="currency-cell">{formatCurrency(row.advances)}</td><td className="currency-cell">{formatCurrency(row.payouts)}</td></tr>
+                      <tr key={row.id}><td className="font-bold"><Link className="hover:text-[var(--color-gold-dark)]" href={`/reports/staff/${row.id}?startDate=${range.startDate}&endDate=${range.endDate}`}>{row.name}</Link></td><td>{row.normalPercent}% / 50%</td><td>{row.bills}</td><td className="currency-cell">{formatCurrency(row.sales)}</td><td className="currency-cell font-black">{formatCurrency(row.commission)}</td><td className="currency-cell">{formatCurrency(row.tips)}</td><td className="currency-cell">{formatCurrency(row.advances)}</td><td className="currency-cell">{formatCurrency(row.payouts)}</td></tr>
                     ))}
                   </tbody>
                 </table>
