@@ -86,6 +86,40 @@ CREATE TABLE "Staff" (
 );
 
 -- CreateTable
+CREATE TABLE "BusinessDay" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "businessDate" DATETIME NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'OPEN',
+    "openedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "closedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "BarTable" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "businessDayId" TEXT NOT NULL,
+    "tableNumber" INTEGER NOT NULL,
+    "tableName" TEXT NOT NULL,
+    "customerName" TEXT,
+    "guestCount" INTEGER,
+    "staffId" TEXT NOT NULL,
+    "openedByUserId" TEXT,
+    "closedByUserId" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'OPEN',
+    "openedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "settledAt" DATETIME,
+    "closedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "BarTable_businessDayId_fkey" FOREIGN KEY ("businessDayId") REFERENCES "BusinessDay" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "BarTable_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "Staff" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "BarTable_openedByUserId_fkey" FOREIGN KEY ("openedByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "BarTable_closedByUserId_fkey" FOREIGN KEY ("closedByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "StaffCommissionRule" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -150,6 +184,8 @@ CREATE TABLE "OfferEligibleItem" (
 CREATE TABLE "Order" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "billNumber" TEXT NOT NULL,
+    "businessDayId" TEXT,
+    "tableId" TEXT,
     "tableNumber" TEXT,
     "customerName" TEXT,
     "staffId" TEXT NOT NULL,
@@ -172,6 +208,8 @@ CREATE TABLE "Order" (
     "voidReason" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Order_businessDayId_fkey" FOREIGN KEY ("businessDayId") REFERENCES "BusinessDay" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "Order_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "BarTable" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Order_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "Staff" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Order_cashierId_fkey" FOREIGN KEY ("cashierId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -388,6 +426,15 @@ CREATE UNIQUE INDEX "User_staffId_key" ON "User"("staffId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "BusinessDay_businessDate_key" ON "BusinessDay"("businessDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "BarTable_businessDayId_tableNumber_key" ON "BarTable"("businessDayId", "tableNumber");
+
+-- CreateIndex
+CREATE INDEX "BarTable_status_openedAt_idx" ON "BarTable"("status", "openedAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Permission_key_key" ON "Permission"("key");

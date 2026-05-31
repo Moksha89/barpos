@@ -1,7 +1,8 @@
 "use client";
 
 import { PaymentMode } from "@prisma/client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Plus, ReceiptText, Search, Trash2 } from "lucide-react";
 
 import { createPosOrder } from "@/lib/actions";
 import { formatCurrency, fromCents } from "@/lib/money";
@@ -18,6 +19,7 @@ type PosItem = {
   sellingPriceCents: number;
   purchaseCostCents: number;
   stockQuantity: number;
+  unitType: string;
   commissionEligible: boolean;
   specialCommissionEligible: boolean;
   complimentaryEligible: boolean;
@@ -27,7 +29,6 @@ type PosStaff = {
   id: string;
   name: string;
   normalCommissionPercent: number;
-  specialCommissionPercent: number;
 };
 
 type PosOffer = {
@@ -38,6 +39,14 @@ type PosOffer = {
   buyQuantity: number;
   freeQuantity: number;
   eligibleFreeItems: { item: PosItem }[];
+};
+
+type StarterRule = {
+  id: string;
+  name: string;
+  freeQuantity: number;
+  eligibleFreeItems: { item: PosItem }[];
+  appliesTo: (item: PosItem, quantity: number) => boolean;
 };
 
 type CartLine = {
@@ -51,7 +60,23 @@ type CartLine = {
 
 type PaymentLine = {
   mode: PaymentMode;
+  paymentMethodId: string;
   amount: number;
+};
+
+type PosPaymentMethod = {
+  id: string;
+  name: string;
+  mode: PaymentMode;
+};
+
+type ExistingOrderItem = {
+  itemId: string;
+  quantity: number;
+  isComplimentary: boolean;
+  offerId: string | null;
+  complimentaryReason: string | null;
+  item: PosItem;
 };
 
 export function PosBillingClient({
@@ -59,26 +84,71 @@ export function PosBillingClient({
   items,
   staff,
   offers,
+  paymentMethods,
+  table,
 }: {
   categories: PosCategory[];
   items: PosItem[];
   staff: PosStaff[];
   offers: PosOffer[];
+  paymentMethods: PosPaymentMethod[];
+  table?: {
+    id: string;
+    tableName: string;
+    customerName: string | null;
+    staffId: string;
+    orders: {
+      id: string;
+      status: string;
+      discountCents: number;
+      items: ExistingOrderItem[];
+    }[];
+  } | null;
 }) {
+  const existingOrder = table?.orders[0];
+  const defaultMethod = paymentMethods[0];
   const [selectedCategoryId, setSelectedCategoryId] = useState(categories[0]?.id);
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [staffId, setStaffId] = useState(staff[0]?.id ?? "");
-  const [tableNumber, setTableNumber] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [discount, setDiscount] = useState(0);
+  const [cart, setCart] = useState<CartLine[]>(
+    existingOrder?.items.map((line, index) => ({
+      key: `saved-${line.itemId}-${index}`,
+      item: line.item,
+      quantity: line.quantity,
+      isComplimentary: line.isComplimentary,
+      offerId: line.offerId ?? undefined,
+      complimentaryReason: line.complimentaryReason ?? undefined,
+    })) ?? [],
+  );
+  const [staffId, setStaffId] = useState(table?.staffId ?? staff[0]?.id ?? "");
+  const [tableNumber, setTableNumber] = useState(table?.tableName ?? "");
+  const [customerName, setCustomerName] = useState(table?.customerName ?? "");
+  const [discount, setDiscount] = useState(fromCents(existingOrder?.discountCents ?? 0));
   const [tip, setTip] = useState(0);
+  const [itemSearch, setItemSearch] = useState("");
   const [payments, setPayments] = useState<PaymentLine[]>([
-    { mode: PaymentMode.CASH, amount: 0 },
+    {
+      mode: defaultMethod?.mode ?? PaymentMode.CASH,
+      paymentMethodId: defaultMethod?.id ?? "",
+      amount: 0,
+    },
   ]);
-  const [orderJson, setOrderJson] = useState("");
+  const keyCounter = useRef(0);
+  const orderJsonRef = useRef<HTMLInputElement>(null);
+  const orderActionRef = useRef<HTMLInputElement>(null);
 
   const selectedStaff = staff.find((member) => member.id === staffId);
-  const visibleItems = items.filter((item) => item.categoryId === selectedCategoryId);
+  const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
+  const normalizedItemSearch = itemSearch.trim().toLowerCase();
+  const visibleItems = items.filter((item) => {
+    if (normalizedItemSearch) {
+      return item.name.toLowerCase().includes(normalizedItemSearch);
+    }
+    return item.categoryId === selectedCategoryId;
+  });
+
+  const nextCartKey = () => {
+    keyCounter.current += 1;
+    return `cart-${keyCounter.current}`;
+  };
 
   const subtotal = cart.reduce(
     (total, line) =>
@@ -90,7 +160,57 @@ export function PosBillingClient({
   const paid = payments.reduce((total, payment) => total + payment.amount, 0);
 
   const eligibleOffers = useMemo(() => {
-    return offers
+    const starterItems = items
+      .filter((item) => item.complimentaryEligible)
+      .map((item) => ({ item }));
+    const starterRules: StarterRule[] = [
+      {
+        id: "half-bottle-starter",
+        name: "Half bottle = 1 free starter",
+        freeQuantity: 1,
+        eligibleFreeItems: starterItems,
+        appliesTo: (item) => item.unitType.toLowerCase() === "half",
+      },
+      {
+        id: "full-bottle-starter",
+        name: "Full bottle = 2 free starters",
+        freeQuantity: 2,
+        eligibleFreeItems: starterItems,
+        appliesTo: (item) => item.unitType.toLowerCase() === "full",
+      },
+      {
+        id: "beer-bucket-starter",
+        name: "Bucket of 5 beers = 1 free starter",
+        freeQuantity: 1,
+        eligibleFreeItems: starterItems,
+        appliesTo: (item, quantity) =>
+          (item.unitType.toLowerCase() === "bucket" || quantity >= 5) &&
+          (categoryById.get(item.categoryId)?.name.toLowerCase().includes("beer") ?? false),
+      },
+    ];
+    const systemOffers = starterRules
+      .map((offer) => {
+        const allowed = cart
+          .filter((line) => !line.isComplimentary)
+          .reduce((total, line) => {
+            if (!offer.appliesTo(line.item, line.quantity)) {
+              return total;
+            }
+            if (offer.id === "beer-bucket-starter") {
+              if (line.item.unitType.toLowerCase() === "bucket") {
+                return total + line.quantity * offer.freeQuantity;
+              }
+              return total + Math.floor(line.quantity / 5) * offer.freeQuantity;
+            }
+            return total + Math.trunc(line.quantity) * offer.freeQuantity;
+          }, 0);
+        const used = cart
+          .filter((line) => line.isComplimentary && line.offerId === offer.id)
+          .reduce((total, line) => total + line.quantity, 0);
+        return { offer, remaining: Math.max(allowed - used, 0) };
+      })
+      .filter((entry) => entry.remaining > 0 && entry.offer.eligibleFreeItems.length > 0);
+    const configuredOffers = offers
       .map((offer) => {
         const boughtQuantity = cart
           .filter(
@@ -107,7 +227,8 @@ export function PosBillingClient({
         return { offer, remaining: Math.max(allowed - used, 0) };
       })
       .filter((entry) => entry.remaining > 0);
-  }, [cart, offers]);
+    return [...systemOffers, ...configuredOffers];
+  }, [cart, categoryById, items, offers]);
 
   const addItem = (item: PosItem) => {
     setCart((current) => {
@@ -122,7 +243,7 @@ export function PosBillingClient({
       return [
         ...current,
         {
-          key: crypto.randomUUID(),
+          key: nextCartKey(),
           item,
           quantity: 1,
           isComplimentary: false,
@@ -131,11 +252,11 @@ export function PosBillingClient({
     });
   };
 
-  const addComplimentary = (offer: PosOffer, item: PosItem) => {
+  const addComplimentary = (offer: Pick<PosOffer, "id" | "name">, item: PosItem) => {
     setCart((current) => [
       ...current,
       {
-        key: crypto.randomUUID(),
+        key: nextCartKey(),
         item,
         quantity: 1,
         isComplimentary: true,
@@ -150,13 +271,20 @@ export function PosBillingClient({
   };
 
   const prepareOrder = () => {
-    setOrderJson(
+    if (!orderJsonRef.current) {
+      return;
+    }
+    const selectedAction = orderActionRef.current?.value ?? "SAVE";
+    const isSettlement = selectedAction === "SETTLE";
+    orderJsonRef.current.value =
       JSON.stringify({
+        tableId: table?.id ?? null,
+        action: selectedAction,
         tableNumber,
         customerName,
         staffId,
         discount,
-        tip,
+        tip: isSettlement ? tip : 0,
         items: cart.map((line) => ({
           itemId: line.item.id,
           quantity: line.quantity,
@@ -164,60 +292,79 @@ export function PosBillingClient({
           offerId: line.offerId ?? null,
           complimentaryReason: line.complimentaryReason ?? null,
         })),
-        payments,
-      }),
-    );
+        payments: isSettlement ? payments : [],
+      });
   };
 
   const setExactCash = () => {
-    setPayments([{ mode: PaymentMode.CASH, amount: totalDue }]);
+    setPayments([
+      {
+        mode: defaultMethod?.mode ?? PaymentMode.CASH,
+        paymentMethodId: defaultMethod?.id ?? "",
+        amount: totalDue,
+      },
+    ]);
   };
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[1fr_440px]">
-      <section className="rounded-3xl bg-white p-5 shadow-sm">
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-sm sm:p-4">
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="grid gap-1 text-sm font-bold">
+          <label className="grid gap-1.5 text-xs font-black uppercase tracking-wide text-stone-700">
             Table / Customer
             <input
-              className="min-h-11 rounded-xl border border-stone-200 px-3"
+              className="min-h-10 rounded-lg border border-[var(--color-border)] px-3 text-sm outline-none focus:border-[var(--color-gold)] focus:ring-2 focus:ring-[var(--color-gold)] disabled:bg-stone-100"
               onChange={(event) => setTableNumber(event.target.value)}
               placeholder="T-12"
+              readOnly={Boolean(table)}
               value={tableNumber}
             />
           </label>
-          <label className="grid gap-1 text-sm font-bold">
+          <label className="grid gap-1.5 text-xs font-black uppercase tracking-wide text-stone-700">
             Customer name
             <input
-              className="min-h-11 rounded-xl border border-stone-200 px-3"
+              className="min-h-10 rounded-lg border border-[var(--color-border)] px-3 text-sm outline-none focus:border-[var(--color-gold)] focus:ring-2 focus:ring-[var(--color-gold)] disabled:bg-stone-100"
               onChange={(event) => setCustomerName(event.target.value)}
               placeholder="Walk-in"
+              readOnly={Boolean(table)}
               value={customerName}
             />
           </label>
-          <label className="grid gap-1 text-sm font-bold">
+          <label className="grid gap-1.5 text-xs font-black uppercase tracking-wide text-stone-700">
             Waitress / Staff
             <select
-              className="min-h-11 rounded-xl border border-stone-200 px-3"
+              className="min-h-10 rounded-lg border border-[var(--color-border)] px-3 text-sm outline-none focus:border-[var(--color-gold)] focus:ring-2 focus:ring-[var(--color-gold)] disabled:bg-stone-100"
+              disabled={Boolean(table)}
               onChange={(event) => setStaffId(event.target.value)}
               value={staffId}
             >
               {staff.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.name} · {member.normalCommissionPercent}% / {member.specialCommissionPercent}%
+                  {member.name} · {member.normalCommissionPercent}% / special 50%
                 </option>
               ))}
             </select>
           </label>
         </div>
 
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
+        <label className="mt-4 flex min-h-11 items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-stone-50 px-3 focus-within:border-[var(--color-gold)] focus-within:ring-2 focus-within:ring-[var(--color-gold)]">
+          <Search className="h-4 w-4 shrink-0 text-stone-500" />
+          <input
+            className="min-h-10 flex-1 bg-transparent text-sm font-bold text-stone-950 outline-none placeholder:text-stone-400"
+            onChange={(event) => setItemSearch(event.target.value)}
+            placeholder="Quick search items to add..."
+            type="search"
+            value={itemSearch}
+          />
+        </label>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto rounded-2xl bg-stone-50 p-2">
           {categories.map((category) => (
             <button
-              className={`min-h-12 rounded-2xl px-4 text-sm font-black ${
+              className={`min-h-9 shrink-0 rounded-xl px-3 text-xs font-black transition ${
                 category.id === selectedCategoryId
-                  ? "bg-stone-950 text-white"
-                  : "bg-stone-100 text-stone-700"
+                  ? "bg-stone-950 text-white shadow-sm"
+                  : "bg-white text-stone-700 hover:bg-amber-50"
               }`}
               key={category.id}
               onClick={() => setSelectedCategoryId(category.id)}
@@ -228,48 +375,54 @@ export function PosBillingClient({
           ))}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {visibleItems.map((item) => (
             <button
-              className="min-h-28 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-left transition hover:border-amber-300 hover:bg-amber-50"
+              className="group min-h-24 rounded-2xl border border-[var(--color-border)] bg-stone-50 p-3 text-left transition hover:-translate-y-0.5 hover:border-[var(--color-gold)] hover:bg-amber-50 hover:shadow-sm"
               key={item.id}
               onClick={() => addItem(item)}
               type="button"
             >
-              <p className="font-black">{item.name}</p>
-              <p className="mt-2 text-lg font-black text-amber-700">
-                {formatCurrency(item.sellingPriceCents)}
-              </p>
-              <p className="mt-1 text-xs text-stone-500">
-                Stock {item.stockQuantity}
-                {item.specialCommissionEligible ? " · special commission" : ""}
-              </p>
+              <div className="flex h-full flex-col justify-between gap-3">
+                <div>
+                  <p className="line-clamp-2 text-sm font-black text-stone-950">{item.name}</p>
+                  <p className="mt-1 text-lg font-black text-[var(--color-gold-dark)]">
+                    {formatCurrency(item.sellingPriceCents)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {normalizedItemSearch ? <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-stone-500">{categoryById.get(item.categoryId)?.name}</span> : null}
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-stone-500">Stock {item.stockQuantity}</span>
+                  {item.specialCommissionEligible ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">Special</span> : null}
+                  {item.complimentaryEligible ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-black text-green-700">Free eligible</span> : null}
+                </div>
+              </div>
             </button>
           ))}
         </div>
 
-        <div className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-4">
-          <h2 className="font-black">Eligible complimentary starters</h2>
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <h2 className="text-sm font-black">Eligible complimentary starters</h2>
           {eligibleOffers.length === 0 ? (
-            <p className="mt-2 text-sm text-stone-600">
+            <p className="mt-1 text-sm text-stone-600">
               Add eligible alcohol items to unlock configured offers.
             </p>
           ) : (
-            <div className="mt-3 grid gap-3">
+            <div className="mt-3 grid gap-2.5">
               {eligibleOffers.map(({ offer, remaining }) => (
-                <div key={offer.id} className="rounded-2xl bg-white p-3">
+                <div key={offer.id} className="rounded-2xl border border-amber-100 bg-white p-3">
                   <p className="text-sm font-black">
                     {offer.name} · {remaining} free item(s) remaining
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {offer.eligibleFreeItems.map(({ item }) => (
                       <button
-                        className="rounded-full bg-stone-950 px-3 py-2 text-xs font-bold text-white"
+                        className="inline-flex items-center gap-1 rounded-full bg-stone-950 px-3 py-2 text-xs font-bold text-white"
                         key={item.id}
                         onClick={() => addComplimentary(offer, item)}
                         type="button"
                       >
-                        Add {item.name} ₹0
+                        <Plus className="h-3 w-3" /> Add {item.name} AED 0
                       </button>
                     ))}
                   </div>
@@ -280,52 +433,59 @@ export function PosBillingClient({
         </div>
       </section>
 
-      <aside className="rounded-3xl bg-stone-950 p-5 text-white shadow-sm">
-        <h2 className="text-2xl font-black">Current bill</h2>
-        <p className="mt-1 text-sm text-stone-400">
-          Staff: {selectedStaff?.name ?? "Select staff"}
-        </p>
+      <aside className="sticky bottom-0 rounded-2xl bg-stone-950 p-3 text-white shadow-sm sm:p-4 lg:top-20 lg:self-start">
+        <div className="flex items-start justify-between gap-2.5">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-black"><ReceiptText className="h-5 w-5 text-[var(--color-gold)]" />Table bill</h2>
+            <p className="mt-1 text-sm text-stone-400">
+              {selectedStaff?.name ?? "Select staff"} · {existingOrder ? "saved table open" : "new table order"}
+            </p>
+          </div>
+          <span className="rounded-full bg-[var(--color-gold)] px-3 py-1.5 text-xs font-black text-stone-950">
+            {formatCurrency(Math.round(totalDue * 100))}
+          </span>
+        </div>
 
-        <div className="mt-4 grid max-h-[360px] gap-2 overflow-y-auto pr-1">
+        <div className="mt-3 grid max-h-[260px] gap-2 overflow-y-auto pr-1">
           {cart.map((line) => (
-            <div key={line.key} className="rounded-2xl bg-white/10 p-3">
-              <div className="flex items-start justify-between gap-3">
+            <div key={line.key} className={`rounded-xl p-2.5 ${line.isComplimentary ? "border border-amber-300/40 bg-amber-300/10" : "bg-white/10"}`}>
+              <div className="flex items-start justify-between gap-2.5">
                 <div>
-                  <p className="font-bold">{line.item.name}</p>
+                  <p className="text-sm font-bold">{line.item.name}</p>
                   <p className="text-xs text-stone-400">
                     Qty {line.quantity} ·{" "}
                     {line.isComplimentary
-                      ? "₹0 Complimentary"
+                      ? "AED 0 Complimentary"
                       : formatCurrency(line.item.sellingPriceCents)}
                   </p>
                 </div>
                 <button
-                  className="rounded-full bg-red-500 px-2 py-1 text-xs font-bold"
+                  className="grid h-8 w-8 place-items-center rounded-full bg-red-500 text-white transition hover:bg-red-600"
                   onClick={() => removeLine(line.key)}
                   type="button"
                 >
-                  Remove
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-4 grid gap-3">
-          <label className="grid gap-1 text-sm font-bold">
+        <div className="mt-3 grid gap-2.5">
+          <label className="grid gap-1 text-xs font-black uppercase tracking-wide text-stone-300">
             Discount
             <input
-              className="min-h-11 rounded-xl border border-white/10 bg-white/10 px-3"
+              className="min-h-10 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white outline-none focus:border-[var(--color-gold)]"
               min="0"
               onChange={(event) => setDiscount(Number(event.target.value))}
               type="number"
               value={discount}
             />
           </label>
-          <label className="grid gap-1 text-sm font-bold">
+          <label className="grid gap-1 text-xs font-black uppercase tracking-wide text-stone-300">
             Tip (100% waitress)
             <input
-              className="min-h-11 rounded-xl border border-white/10 bg-white/10 px-3"
+              className="min-h-10 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white outline-none focus:border-[var(--color-gold)]"
               min="0"
               onChange={(event) => setTip(Number(event.target.value))}
               type="number"
@@ -334,38 +494,45 @@ export function PosBillingClient({
           </label>
         </div>
 
-        <div className="mt-4 rounded-2xl bg-white/10 p-4 text-sm">
-          <div className="flex justify-between"><span>Subtotal</span><b>₹{subtotal.toFixed(0)}</b></div>
-          <div className="flex justify-between"><span>Discount</span><b>₹{discount.toFixed(0)}</b></div>
-          <div className="flex justify-between"><span>Restaurant sale</span><b>₹{netSales.toFixed(0)}</b></div>
-          <div className="flex justify-between text-amber-200"><span>Waitress tip</span><b>₹{tip.toFixed(0)}</b></div>
-          <div className="mt-2 flex justify-between border-t border-white/10 pt-2 text-lg">
-            <span>Total collected</span><b>₹{totalDue.toFixed(0)}</b>
+        <div className="mt-3 rounded-2xl bg-white/10 p-4 text-sm">
+          <div className="flex justify-between"><span>Subtotal</span><b>AED {subtotal.toFixed(0)}</b></div>
+          <div className="flex justify-between"><span>Discount</span><b>AED {discount.toFixed(0)}</b></div>
+          <div className="flex justify-between"><span>Restaurant sale</span><b>AED {netSales.toFixed(0)}</b></div>
+          <div className="flex justify-between text-amber-200"><span>Waitress tip</span><b>AED {tip.toFixed(0)}</b></div>
+          <div className="mt-2 flex justify-between border-t border-white/10 pt-2 text-lg font-black">
+            <span>Total collected</span><b>AED {totalDue.toFixed(0)}</b>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-3 grid gap-2">
           {payments.map((payment, index) => (
-            <div className="grid grid-cols-[1fr_1fr_auto] gap-2" key={`${payment.mode}-${index}`}>
+            <div className="grid grid-cols-[minmax(0,1fr)_96px_auto] gap-2" key={`${payment.mode}-${index}`}>
               <select
-                className="min-h-10 rounded-xl bg-white px-2 text-sm text-stone-950"
+                className="min-h-10 rounded-lg bg-white px-2 text-sm text-stone-950"
                 onChange={(event) =>
                   setPayments((current) =>
-                    current.map((entry, entryIndex) =>
-                      entryIndex === index
-                        ? { ...entry, mode: event.target.value as PaymentMode }
-                        : entry,
-                    ),
+                    current.map((entry, entryIndex) => {
+                      const method = paymentMethods.find(
+                        (candidate) => candidate.id === event.target.value,
+                      );
+                      return entryIndex === index
+                        ? {
+                            ...entry,
+                            paymentMethodId: method?.id ?? "",
+                            mode: method?.mode ?? PaymentMode.CASH,
+                          }
+                        : entry;
+                    }),
                   )
                 }
-                value={payment.mode}
+                value={payment.paymentMethodId}
               >
-                {Object.values(PaymentMode).map((mode) => (
-                  <option key={mode} value={mode}>{mode}</option>
+                {paymentMethods.map((method) => (
+                  <option key={method.id} value={method.id}>{method.name}</option>
                 ))}
               </select>
               <input
-                className="min-h-10 rounded-xl bg-white px-2 text-sm text-stone-950"
+                className="min-h-10 rounded-lg bg-white px-2 text-sm text-stone-950"
                 onChange={(event) =>
                   setPayments((current) =>
                     current.map((entry, entryIndex) =>
@@ -379,7 +546,7 @@ export function PosBillingClient({
                 value={payment.amount}
               />
               <button
-                className="rounded-xl bg-white/10 px-3 text-xs font-bold"
+                className="rounded-lg bg-white/10 px-3 text-xs font-bold transition hover:bg-red-500"
                 onClick={() => setPayments((current) => current.filter((_, entryIndex) => entryIndex !== index))}
                 type="button"
               >
@@ -388,26 +555,63 @@ export function PosBillingClient({
             </div>
           ))}
           <div className="grid grid-cols-2 gap-2">
-            <button className="min-h-10 rounded-xl bg-white/10 text-xs font-bold" onClick={() => setPayments((current) => [...current, { mode: PaymentMode.CARD, amount: 0 }])} type="button">
+            <button
+              className="min-h-10 rounded-lg bg-white/10 text-xs font-bold transition hover:bg-white/15"
+              onClick={() =>
+                setPayments((current) => [
+                  ...current,
+                  {
+                    mode: defaultMethod?.mode ?? PaymentMode.CARD,
+                    paymentMethodId: defaultMethod?.id ?? "",
+                    amount: 0,
+                  },
+                ])
+              }
+              type="button"
+            >
               Add split
             </button>
-            <button className="min-h-10 rounded-xl bg-amber-400 text-xs font-black text-stone-950" onClick={setExactCash} type="button">
+            <button className="min-h-10 rounded-lg bg-[var(--color-gold)] text-xs font-black text-stone-950 transition hover:bg-[var(--color-gold-dark)]" onClick={setExactCash} type="button">
               Exact cash
             </button>
           </div>
-          <p className={paid === totalDue ? "text-xs text-green-300" : "text-xs text-red-300"}>
-            Paid ₹{paid.toFixed(0)} / Due ₹{totalDue.toFixed(0)}
+          <p className={paid === totalDue ? "rounded-lg bg-green-500/10 px-3 py-2 text-xs font-bold text-green-300" : "rounded-lg bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300"}>
+            Paid AED {paid.toFixed(0)} / Due AED {totalDue.toFixed(0)}
           </p>
         </div>
 
-        <form action={createPosOrder} className="mt-4" onSubmit={prepareOrder}>
-          <input name="orderJson" type="hidden" value={orderJson} />
+        <form action={createPosOrder} className="mt-3 grid gap-2" onSubmit={prepareOrder}>
+          <input name="orderJson" ref={orderJsonRef} type="hidden" />
+          <input ref={orderActionRef} type="hidden" defaultValue="SAVE" />
           <button
-            className="min-h-12 w-full rounded-2xl bg-amber-400 px-4 text-base font-black text-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={cart.length === 0 || !staffId || paid !== totalDue}
+            className="min-h-10 w-full rounded-lg bg-white px-4 text-sm font-black text-stone-950 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={cart.length === 0 || !staffId}
+            onClick={() => {
+              if (orderActionRef.current) orderActionRef.current.value = "SAVE";
+            }}
             type="submit"
           >
-            Settle & Save Bill
+            Save to active table
+          </button>
+          <button
+            className="min-h-10 w-full rounded-lg bg-[var(--color-gold)] px-4 text-sm font-black text-stone-950 transition hover:bg-[var(--color-gold-dark)] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={cart.length === 0 || !staffId || paid !== totalDue}
+            onClick={() => {
+              if (orderActionRef.current) orderActionRef.current.value = "SETTLE";
+            }}
+            type="submit"
+          >
+            Settle and print invoice
+          </button>
+          <button
+            className="min-h-10 w-full rounded-lg border border-amber-400 px-4 text-sm font-black text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={cart.length === 0 || !staffId}
+            onClick={() => {
+              if (orderActionRef.current) orderActionRef.current.value = "PENDING";
+            }}
+            type="submit"
+          >
+            Mark pending bill
           </button>
         </form>
       </aside>

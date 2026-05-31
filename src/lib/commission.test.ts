@@ -9,7 +9,6 @@ describe("calculateCommission", () => {
       eligibleSalesCents: toCents(10000),
       specialDrinkSalesCents: toCents(2000),
       normalCommissionPercent: 25,
-      specialCommissionPercent: 50,
     });
 
     expect(result.normalEligibleSalesCents).toBe(toCents(8000));
@@ -23,7 +22,6 @@ describe("calculateCommission", () => {
       eligibleSalesCents: toCents(1000),
       specialDrinkSalesCents: toCents(2000),
       normalCommissionPercent: 25,
-      specialCommissionPercent: 50,
     });
 
     expect(result.normalEligibleSalesCents).toBe(0);

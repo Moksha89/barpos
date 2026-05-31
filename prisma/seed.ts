@@ -12,6 +12,7 @@ const prisma = new PrismaClient({ adapter });
 const permissions = [
   ["dashboard.view", "View dashboard"],
   ["pos.create", "Create bills"],
+  ["tables.manage", "Manage active tables"],
   ["pos.discount", "Apply discounts"],
   ["pos.void", "Void bills"],
   ["offers.manage", "Manage offers"],
@@ -57,8 +58,8 @@ async function main() {
     },
     {
       name: "CASHIER" as const,
-      label: "Cashier",
-      permissionKeys: ["dashboard.view", "pos.create", "reports.view"],
+      label: "Billman / Cashier",
+      permissionKeys: ["dashboard.view", "pos.create", "tables.manage"],
     },
     {
       name: "WAITER_WAITRESS" as const,
@@ -106,19 +107,67 @@ async function main() {
 
   const categories = [
     {
-      name: "Beer",
+      name: "Champagne & Sparkling Wine",
       type: "alcohol",
       commissionEligible: true,
       complimentaryEligible: false,
     },
     {
-      name: "Half Bottle",
+      name: "Wine",
       type: "alcohol",
       commissionEligible: true,
       complimentaryEligible: false,
     },
     {
-      name: "Full Bottle",
+      name: "Draught Beer",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Bottle Beer",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Brandy & Cognac",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Vodka",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Rum",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Gin",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Tequila",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Whisky",
+      type: "alcohol",
+      commissionEligible: true,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Liqueurs",
       type: "alcohol",
       commissionEligible: true,
       complimentaryEligible: false,
@@ -130,24 +179,72 @@ async function main() {
       complimentaryEligible: false,
     },
     {
-      name: "Special Commission Drinks",
+      name: "Shooters",
       type: "alcohol",
       commissionEligible: true,
       complimentaryEligible: false,
     },
     {
-      name: "Starters",
-      type: "food",
-      commissionEligible: false,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Main Course",
+      name: "Rice & Biryani",
       type: "food",
       commissionEligible: false,
       complimentaryEligible: false,
     },
-  ];
+    {
+      name: "Fried Rice & Noodles",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Seafood Starters",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Breads",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Fresh Juices",
+      type: "beverage",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Veg Starters",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Veg Main Course",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Fruit Platter",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Non Veg Starters",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+    {
+      name: "Non Veg Main Course",
+      type: "food",
+      commissionEligible: false,
+      complimentaryEligible: false,
+    },
+  ] as const;
 
   for (const category of categories) {
     await prisma.category.upsert({
@@ -157,99 +254,436 @@ async function main() {
     });
   }
 
+  await prisma.category.updateMany({
+    where: { name: { notIn: categories.map((category) => category.name) } },
+    data: { active: false },
+  });
+
   const categoryByName = new Map(
     (await prisma.category.findMany()).map((category) => [category.name, category]),
   );
 
   const items = [
-    {
-      name: "Kingfisher Beer Bucket",
-      sku: "BEER-BUCKET-KF",
-      categoryName: "Beer",
-      sellingPrice: 1200,
-      purchaseCost: 700,
-      stockQuantity: 60,
-      commissionEligible: true,
-    },
-    {
-      name: "Premium Half Bottle",
-      sku: "HALF-PREMIUM",
-      categoryName: "Half Bottle",
-      sellingPrice: 2400,
-      purchaseCost: 1450,
-      stockQuantity: 35,
-      commissionEligible: true,
-    },
-    {
-      name: "Whisky Full Bottle",
-      sku: "FULL-WHISKY",
-      categoryName: "Full Bottle",
-      sellingPrice: 4500,
-      purchaseCost: 2800,
-      stockQuantity: 25,
-      commissionEligible: true,
-    },
-    {
-      name: "Gold Cocktail",
-      sku: "COCKTAIL-GOLD",
-      categoryName: "Cocktails",
-      sellingPrice: 900,
-      purchaseCost: 350,
-      stockQuantity: 90,
-      commissionEligible: true,
-    },
-    {
-      name: "VIP Special Drink",
-      sku: "SPECIAL-VIP",
-      categoryName: "Special Commission Drinks",
-      sellingPrice: 2000,
-      purchaseCost: 900,
-      stockQuantity: 30,
-      commissionEligible: true,
-      specialCommissionEligible: true,
-    },
-    {
-      name: "Chicken Pakoda",
-      sku: "STARTER-CHICKEN-PAKODA",
-      categoryName: "Starters",
-      sellingPrice: 350,
-      purchaseCost: 120,
-      stockQuantity: 120,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Chicken 65",
-      sku: "STARTER-CHICKEN-65",
-      categoryName: "Starters",
-      sellingPrice: 420,
-      purchaseCost: 160,
-      stockQuantity: 100,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Paneer Tikka",
-      sku: "STARTER-PANEER-TIKKA",
-      categoryName: "Starters",
-      sellingPrice: 380,
-      purchaseCost: 140,
-      stockQuantity: 100,
-      complimentaryEligible: true,
-    },
-    {
-      name: "Veg Biryani",
-      sku: "MAIN-VEG-BIRYANI",
-      categoryName: "Main Course",
-      sellingPrice: 500,
-      purchaseCost: 220,
-      stockQuantity: 80,
-    },
+    // Champagne & sparkling wine
+    { name: "Lanson Black Label Bottle", sku: "MENU-LANSON-BLACK-LABEL-BOTTLE", purchaseCost: 0, sellingPrice: 600, unitType: "bottle" },
+    { name: "House Sparkling Bottega Prosecco Bottle", sku: "MENU-HOUSE-SPARKLING-BOTTEGA-PROSECCO-BOTTLE", purchaseCost: 0, sellingPrice: 150, unitType: "bottle" },
+
+    // Wine
+    { name: "Shiraz Cabernet Bottle", sku: "MENU-SHIRAZ-CABERNET-BOTTLE", purchaseCost: 50, sellingPrice: 150, unitType: "bottle" },
+    { name: "Red Wine Glass", sku: "MENU-RED-WINE-GLASS", purchaseCost: 10, sellingPrice: 30, unitType: "glass" },
+    { name: "Chardonnay Bottle", sku: "MENU-CHARDONNAY-BOTTLE", purchaseCost: 50, sellingPrice: 150, unitType: "bottle" },
+    { name: "White Wine Glass", sku: "MENU-WHITE-WINE-GLASS", purchaseCost: 10, sellingPrice: 30, unitType: "glass" },
+    { name: "Mateus Rose Bottle", sku: "MENU-MATEUS-ROSE-BOTTLE", purchaseCost: 0, sellingPrice: 150, unitType: "bottle" },
+
+    // Draught beers
+    { name: "Draught Beer Small", sku: "MENU-DRAUGHT-BEER-SMALL", purchaseCost: 0, sellingPrice: 35, unitType: "glass" },
+    { name: "Draught Beer Large", sku: "MENU-DRAUGHT-BEER-LARGE", purchaseCost: 0, sellingPrice: 40, unitType: "glass" },
+
+    // Bottle beers
+    { name: "Budweiser Bottle", sku: "MENU-BUDWEISER-BOTTLE", purchaseCost: 4.58, sellingPrice: 25, unitType: "bottle" },
+    { name: "Budweiser Bucket (5 Beers)", sku: "MENU-BUDWEISER-BUCKET-5", purchaseCost: 22.9, sellingPrice: 125, unitType: "bucket" },
+    { name: "Heineken Bottle", sku: "MENU-HEINEKEN-BOTTLE", purchaseCost: 4.58, sellingPrice: 25, unitType: "bottle" },
+    { name: "Heineken Bucket (5 Beers)", sku: "MENU-HEINEKEN-BUCKET-5", purchaseCost: 22.9, sellingPrice: 125, unitType: "bucket" },
+    { name: "Corona Bottle", sku: "MENU-CORONA-BOTTLE", purchaseCost: 5.83, sellingPrice: 32, unitType: "bottle" },
+    { name: "Corona Bucket (5 Beers)", sku: "MENU-CORONA-BUCKET-5", purchaseCost: 29.15, sellingPrice: 160, unitType: "bucket" },
+    { name: "King Fisher Bottle", sku: "MENU-KING-FISHER-BOTTLE", purchaseCost: 7.92, sellingPrice: 45, unitType: "bottle" },
+    { name: "King Fisher Bucket (5 Beers)", sku: "MENU-KING-FISHER-BUCKET-5", purchaseCost: 39.6, sellingPrice: 225, unitType: "bucket" },
+
+    // Brandy / cognac — 30ml / half / full
+    { name: "St-Rémy 30ml", sku: "MENU-ST-REMY-30ML", purchaseCost: 1.56, sellingPrice: 30, unitType: "peg" },
+    { name: "St-Rémy Half", sku: "MENU-ST-REMY-HALF", purchaseCost: 19.5, sellingPrice: 175, unitType: "half" },
+    { name: "St-Rémy Full", sku: "MENU-ST-REMY-FULL", purchaseCost: 39, sellingPrice: 350, unitType: "full" },
+    { name: "Hennessy VS 30ml", sku: "MENU-HENNESSY-VS-30ML", purchaseCost: 7.16, sellingPrice: 40, unitType: "peg" },
+    { name: "Hennessy VS Half", sku: "MENU-HENNESSY-VS-HALF", purchaseCost: 89.5, sellingPrice: 300, unitType: "half" },
+    { name: "Hennessy VS Full", sku: "MENU-HENNESSY-VS-FULL", purchaseCost: 179, sellingPrice: 600, unitType: "full" },
+    { name: "Hennessy VSOP 30ml", sku: "MENU-HENNESSY-VSOP-30ML", purchaseCost: 0, sellingPrice: 50, unitType: "peg" },
+    { name: "Hennessy VSOP Half", sku: "MENU-HENNESSY-VSOP-HALF", purchaseCost: 0, sellingPrice: 450, unitType: "half" },
+    { name: "Hennessy VSOP Full", sku: "MENU-HENNESSY-VSOP-FULL", purchaseCost: 0, sellingPrice: 900, unitType: "full" },
+    { name: "Rémy Martin VSOP 30ml", sku: "MENU-REMY-MARTIN-VSOP-30ML", purchaseCost: 0, sellingPrice: 55, unitType: "peg" },
+    { name: "Rémy Martin VSOP Half", sku: "MENU-REMY-MARTIN-VSOP-HALF", purchaseCost: 0, sellingPrice: 450, unitType: "half" },
+    { name: "Rémy Martin VSOP Full", sku: "MENU-REMY-MARTIN-VSOP-FULL", purchaseCost: 0, sellingPrice: 900, unitType: "full" },
+
+    // Vodka — 30ml / half / full
+    { name: "Absolut 30ml", sku: "MENU-ABSOLUT-30ML", purchaseCost: 1.56, sellingPrice: 28, unitType: "peg" },
+    { name: "Absolut Half", sku: "MENU-ABSOLUT-HALF", purchaseCost: 19.5, sellingPrice: 250, unitType: "half" },
+    { name: "Absolut Full", sku: "MENU-ABSOLUT-FULL", purchaseCost: 39, sellingPrice: 450, unitType: "full" },
+    { name: "Smirnoff Red 30ml", sku: "MENU-SMIRNOFF-RED-30ML", purchaseCost: 0, sellingPrice: 28, unitType: "peg" },
+    { name: "Smirnoff Red Half", sku: "MENU-SMIRNOFF-RED-HALF", purchaseCost: 0, sellingPrice: 200, unitType: "half" },
+    { name: "Smirnoff Red Full", sku: "MENU-SMIRNOFF-RED-FULL", purchaseCost: 0, sellingPrice: 400, unitType: "full" },
+    { name: "Grey Goose 30ml", sku: "MENU-GREY-GOOSE-30ML", purchaseCost: 0, sellingPrice: 50, unitType: "peg" },
+    { name: "Grey Goose Half", sku: "MENU-GREY-GOOSE-HALF", purchaseCost: 0, sellingPrice: 450, unitType: "half" },
+    { name: "Grey Goose Full", sku: "MENU-GREY-GOOSE-FULL", purchaseCost: 0, sellingPrice: 900, unitType: "full" },
+
+    // Rum — 30ml / half / full
+    { name: "Bacardi White 30ml", sku: "MENU-BACARDI-WHITE-30ML", purchaseCost: 2, sellingPrice: 30, unitType: "peg" },
+    { name: "Bacardi White Half", sku: "MENU-BACARDI-WHITE-HALF", purchaseCost: 25, sellingPrice: 250, unitType: "half" },
+    { name: "Bacardi White Full", sku: "MENU-BACARDI-WHITE-FULL", purchaseCost: 50, sellingPrice: 400, unitType: "full" },
+    { name: "Captain Morgan Dark 30ml", sku: "MENU-CAPTAIN-MORGAN-DARK-30ML", purchaseCost: 3.4, sellingPrice: 30, unitType: "peg" },
+    { name: "Captain Morgan Dark Half", sku: "MENU-CAPTAIN-MORGAN-DARK-HALF", purchaseCost: 42.5, sellingPrice: 250, unitType: "half" },
+    { name: "Captain Morgan Dark Full", sku: "MENU-CAPTAIN-MORGAN-DARK-FULL", purchaseCost: 85, sellingPrice: 400, unitType: "full" },
+    { name: "Malibu 30ml", sku: "MENU-MALIBU-30ML", purchaseCost: 0, sellingPrice: 30, unitType: "peg" },
+    { name: "Malibu Half", sku: "MENU-MALIBU-HALF", purchaseCost: 0, sellingPrice: 250, unitType: "half" },
+    { name: "Malibu Full", sku: "MENU-MALIBU-FULL", purchaseCost: 0, sellingPrice: 400, unitType: "full" },
+    { name: "Captain Morgan Spiced Gold 30ml", sku: "MENU-CAPTAIN-MORGAN-SPICED-GOLD-30ML", purchaseCost: 2.4, sellingPrice: 30, unitType: "peg" },
+    { name: "Captain Morgan Spiced Gold Half", sku: "MENU-CAPTAIN-MORGAN-SPICED-GOLD-HALF", purchaseCost: 30, sellingPrice: 250, unitType: "half" },
+    { name: "Captain Morgan Spiced Gold Full", sku: "MENU-CAPTAIN-MORGAN-SPICED-GOLD-FULL", purchaseCost: 60, sellingPrice: 400, unitType: "full" },
+
+    // Gin — 30ml / half / full
+    { name: "Gordon's 30ml", sku: "MENU-GORDONS-30ML", purchaseCost: 2, sellingPrice: 40, unitType: "peg" },
+    { name: "Gordon's Half", sku: "MENU-GORDONS-HALF", purchaseCost: 25, sellingPrice: 350, unitType: "half" },
+    { name: "Gordon's Full", sku: "MENU-GORDONS-FULL", purchaseCost: 50, sellingPrice: 700, unitType: "full" },
+    { name: "Bombay Sapphire 30ml", sku: "MENU-BOMBAY-SAPPHIRE-30ML", purchaseCost: 2.2, sellingPrice: 28, unitType: "peg" },
+    { name: "Bombay Sapphire Half", sku: "MENU-BOMBAY-SAPPHIRE-HALF", purchaseCost: 27.5, sellingPrice: 200, unitType: "half" },
+    { name: "Bombay Sapphire Full", sku: "MENU-BOMBAY-SAPPHIRE-FULL", purchaseCost: 55, sellingPrice: 450, unitType: "full" },
+
+    // Tequila — 30ml / half / full
+    { name: "Jose Cuervo Silver 30ml", sku: "MENU-JOSE-CUERVO-SILVER-30ML", purchaseCost: 1.8, sellingPrice: 30, unitType: "peg" },
+    { name: "Jose Cuervo Silver Half", sku: "MENU-JOSE-CUERVO-SILVER-HALF", purchaseCost: 22.5, sellingPrice: 250, unitType: "half" },
+    { name: "Jose Cuervo Silver Full", sku: "MENU-JOSE-CUERVO-SILVER-FULL", purchaseCost: 45, sellingPrice: 400, unitType: "full" },
+    { name: "Jose Cuervo Gold 30ml", sku: "MENU-JOSE-CUERVO-GOLD-30ML", purchaseCost: 0, sellingPrice: 30, unitType: "peg" },
+    { name: "Jose Cuervo Gold Half", sku: "MENU-JOSE-CUERVO-GOLD-HALF", purchaseCost: 0, sellingPrice: 250, unitType: "half" },
+    { name: "Jose Cuervo Gold Full", sku: "MENU-JOSE-CUERVO-GOLD-FULL", purchaseCost: 0, sellingPrice: 400, unitType: "full" },
+
+    // Regular whisky — 30ml / half / full
+    { name: "Ballantine's 30ml", sku: "MENU-BALLANTINES-30ML", purchaseCost: 2, sellingPrice: 28, unitType: "peg" },
+    { name: "Ballantine's Half", sku: "MENU-BALLANTINES-HALF", purchaseCost: 25, sellingPrice: 225, unitType: "half" },
+    { name: "Ballantine's Full", sku: "MENU-BALLANTINES-FULL", purchaseCost: 50, sellingPrice: 425, unitType: "full" },
+    { name: "Red Label 30ml", sku: "MENU-RED-LABEL-30ML", purchaseCost: 1.8, sellingPrice: 28, unitType: "peg" },
+    { name: "Red Label Half", sku: "MENU-RED-LABEL-HALF", purchaseCost: 26, sellingPrice: 225, unitType: "half" },
+    { name: "Red Label Full", sku: "MENU-RED-LABEL-FULL", purchaseCost: 45, sellingPrice: 425, unitType: "full" },
+    { name: "J & B Rare 30ml", sku: "MENU-JB-RARE-30ML", purchaseCost: 0, sellingPrice: 28, unitType: "peg" },
+    { name: "J & B Rare Half", sku: "MENU-JB-RARE-HALF", purchaseCost: 0, sellingPrice: 250, unitType: "half" },
+    { name: "J & B Rare Full", sku: "MENU-JB-RARE-FULL", purchaseCost: 0, sellingPrice: 500, unitType: "full" },
+    { name: "Canadian Club 30ml", sku: "MENU-CANADIAN-CLUB-30ML", purchaseCost: 0, sellingPrice: 28, unitType: "peg" },
+    { name: "Canadian Club Half", sku: "MENU-CANADIAN-CLUB-HALF", purchaseCost: 0, sellingPrice: 250, unitType: "half" },
+    { name: "Canadian Club Full", sku: "MENU-CANADIAN-CLUB-FULL", purchaseCost: 0, sellingPrice: 500, unitType: "full" },
+    { name: "Jameson 30ml", sku: "MENU-JAMESON-30ML", purchaseCost: 0, sellingPrice: 28, unitType: "peg" },
+    { name: "Jameson Half", sku: "MENU-JAMESON-HALF", purchaseCost: 0, sellingPrice: 250, unitType: "half" },
+    { name: "Jameson Full", sku: "MENU-JAMESON-FULL", purchaseCost: 0, sellingPrice: 500, unitType: "full" },
+
+    // Premium whisky — 30ml / half / full
+    { name: "Chivas Regal 12 30ml", sku: "MENU-CHIVAS-REGAL-12-30ML", purchaseCost: 3.2, sellingPrice: 35, unitType: "peg" },
+    { name: "Chivas Regal 12 Half", sku: "MENU-CHIVAS-REGAL-12-HALF", purchaseCost: 50, sellingPrice: 300, unitType: "half" },
+    { name: "Chivas Regal 12 Full", sku: "MENU-CHIVAS-REGAL-12-FULL", purchaseCost: 80, sellingPrice: 600, unitType: "full" },
+    { name: "Jack Daniel's 30ml", sku: "MENU-JACK-DANIELS-30ML", purchaseCost: 2.6, sellingPrice: 35, unitType: "peg" },
+    { name: "Jack Daniel's Half", sku: "MENU-JACK-DANIELS-HALF", purchaseCost: 38, sellingPrice: 300, unitType: "half" },
+    { name: "Jack Daniel's Full", sku: "MENU-JACK-DANIELS-FULL", purchaseCost: 65, sellingPrice: 600, unitType: "full" },
+    { name: "Black Label 30ml", sku: "MENU-BLACK-LABEL-30ML", purchaseCost: 3.4, sellingPrice: 35, unitType: "peg" },
+    { name: "Black Label Half", sku: "MENU-BLACK-LABEL-HALF", purchaseCost: 56, sellingPrice: 300, unitType: "half" },
+    { name: "Black Label Full", sku: "MENU-BLACK-LABEL-FULL", purchaseCost: 85, sellingPrice: 600, unitType: "full" },
+    { name: "Double Black 30ml", sku: "MENU-DOUBLE-BLACK-30ML", purchaseCost: 5.2, sellingPrice: 40, unitType: "peg" },
+    { name: "Double Black Half", sku: "MENU-DOUBLE-BLACK-HALF", purchaseCost: 65, sellingPrice: 400, unitType: "half" },
+    { name: "Double Black Full", sku: "MENU-DOUBLE-BLACK-FULL", purchaseCost: 130, sellingPrice: 800, unitType: "full" },
+    { name: "Jim Beam 30ml", sku: "MENU-JIM-BEAM-30ML", purchaseCost: 0, sellingPrice: 35, unitType: "peg" },
+    { name: "Jim Beam Half", sku: "MENU-JIM-BEAM-HALF", purchaseCost: 0, sellingPrice: 300, unitType: "half" },
+    { name: "Jim Beam Full", sku: "MENU-JIM-BEAM-FULL", purchaseCost: 0, sellingPrice: 600, unitType: "full" },
+
+    // Deluxe scotch whisky — 30ml / half / full
+    { name: "Blue Label 30ml", sku: "MENU-BLUE-LABEL-30ML", purchaseCost: 0, sellingPrice: 100, unitType: "peg" },
+    { name: "Blue Label Half", sku: "MENU-BLUE-LABEL-HALF", purchaseCost: 0, sellingPrice: 1250, unitType: "half" },
+    { name: "Blue Label Full", sku: "MENU-BLUE-LABEL-FULL", purchaseCost: 0, sellingPrice: 2500, unitType: "full" },
+    { name: "Chivas Regal 18 Years 30ml", sku: "MENU-CHIVAS-REGAL-18-YEARS-30ML", purchaseCost: 8, sellingPrice: 50, unitType: "peg" },
+    { name: "Chivas Regal 18 Years Half", sku: "MENU-CHIVAS-REGAL-18-YEARS-HALF", purchaseCost: 100, sellingPrice: 1000, unitType: "half" },
+    { name: "Chivas Regal 18 Years Full", sku: "MENU-CHIVAS-REGAL-18-YEARS-FULL", purchaseCost: 200, sellingPrice: 2000, unitType: "full" },
+    { name: "Royal Salute 21 Years 30ml", sku: "MENU-ROYAL-SALUTE-21-YEARS-30ML", purchaseCost: 0, sellingPrice: 85, unitType: "peg" },
+    { name: "Royal Salute 21 Years Half", sku: "MENU-ROYAL-SALUTE-21-YEARS-HALF", purchaseCost: 0, sellingPrice: 1000, unitType: "half" },
+    { name: "Royal Salute 21 Years Full", sku: "MENU-ROYAL-SALUTE-21-YEARS-FULL", purchaseCost: 0, sellingPrice: 2000, unitType: "full" },
+
+    // Single malt scotch whisky
+    { name: "Glenfiddich 12 Years 30ml", sku: "MENU-GLENFIDDICH-12-YEARS-30ML", purchaseCost: 4.8, sellingPrice: 40, unitType: "peg" },
+    { name: "Glenfiddich 12 Years Half", sku: "MENU-GLENFIDDICH-12-YEARS-HALF", purchaseCost: 60, sellingPrice: 350, unitType: "half" },
+    { name: "Glenfiddich 12 Years Full", sku: "MENU-GLENFIDDICH-12-YEARS-FULL", purchaseCost: 120, sellingPrice: 700, unitType: "full" },
+
+    // Liqueurs — per peg
+    { name: "Baileys Peg", sku: "MENU-BAILEYS-PEG", purchaseCost: 3.12, sellingPrice: 30, unitType: "peg" },
+    { name: "Cointreau Peg", sku: "MENU-COINTREAU-PEG", purchaseCost: 0, sellingPrice: 30, unitType: "peg" },
+    { name: "Kahlua Peg", sku: "MENU-KAHLUA-PEG", purchaseCost: 3.2, sellingPrice: 30, unitType: "peg" },
+    { name: "Peach Schnapps Peg", sku: "MENU-PEACH-SCHNAPPS-PEG", purchaseCost: 0, sellingPrice: 30, unitType: "peg" },
+    { name: "Triple Sec Peg", sku: "MENU-TRIPLE-SEC-PEG", purchaseCost: 0, sellingPrice: 30, unitType: "peg" },
+    { name: "Sambuca Peg", sku: "MENU-SAMBUCA-PEG", purchaseCost: 0, sellingPrice: 30, unitType: "peg" },
+    { name: "Jagermeister Peg", sku: "MENU-JAGERMEISTER-PEG", purchaseCost: 2.2, sellingPrice: 30, unitType: "peg" },
+
+    // Cocktails
+    { name: "Long Island", sku: "MENU-LONG-ISLAND", purchaseCost: 0, sellingPrice: 60, unitType: "glass" },
+    { name: "Bull Frog", sku: "MENU-BULL-FROG", purchaseCost: 0, sellingPrice: 60, unitType: "glass" },
+    { name: "Sex On The Beach", sku: "MENU-SEX-ON-THE-BEACH", purchaseCost: 0, sellingPrice: 45, unitType: "glass" },
+    { name: "Margarita", sku: "MENU-MARGARITA", purchaseCost: 0, sellingPrice: 45, unitType: "glass" },
+    { name: "Pina Colada", sku: "MENU-PINA-COLADA", purchaseCost: 0, sellingPrice: 45, unitType: "glass" },
+    { name: "Cosmopolitan", sku: "MENU-COSMOPOLITAN", purchaseCost: 0, sellingPrice: 45, unitType: "glass" },
+    { name: "Mojito", sku: "MENU-MOJITO", purchaseCost: 0, sellingPrice: 45, unitType: "glass" },
+    { name: "Tequila Sunrise", sku: "MENU-TEQUILA-SUNRISE", purchaseCost: 0, sellingPrice: 40, unitType: "glass" },
+    { name: "Jäger Bomb", sku: "MENU-JAGER-BOMB", purchaseCost: 0, sellingPrice: 50, unitType: "glass" },
+    { name: "Black Russian", sku: "MENU-BLACK-RUSSIAN", purchaseCost: 0, sellingPrice: 45, unitType: "glass" },
+
+    // Shooters
+    { name: "Kamikaze", sku: "MENU-KAMIKAZE", purchaseCost: 0, sellingPrice: 35, unitType: "shot" },
+    { name: "B-52", sku: "MENU-B-52", purchaseCost: 0, sellingPrice: 35, unitType: "shot" },
+    { name: "Brain Damage", sku: "MENU-BRAIN-DAMAGE", purchaseCost: 0, sellingPrice: 35, unitType: "shot" },
+    { name: "Flat Liner", sku: "MENU-FLAT-LINER", purchaseCost: 0, sellingPrice: 35, unitType: "shot" },
+
+    // Rice / biryanis
+    { name: "Ghee Rice", sku: "MENU-GHEE-RICE", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Jeera Rice", sku: "MENU-JEERA-RICE", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Curd Rice", sku: "MENU-CURD-RICE", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Veg Biryani", sku: "MENU-VEG-BIRYANI", purchaseCost: 0, sellingPrice: 20, unitType: "plate" },
+    { name: "Egg Biryani", sku: "MENU-EGG-BIRYANI", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Hyderabadi Chicken Biryani", sku: "MENU-HYDERABADI-CHICKEN-BIRYANI", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Natu Kodi Biryani", sku: "MENU-NATU-KODI-BIRYANI", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Mutton Biryani", sku: "MENU-MUTTON-BIRYANI", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Prawns Biryani", sku: "MENU-PRAWNS-BIRYANI", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Fish Biryani", sku: "MENU-FISH-BIRYANI", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Beef Biryani", sku: "MENU-BEEF-BIRYANI", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+    { name: "Mixed Biryani", sku: "MENU-MIXED-BIRYANI", purchaseCost: 0, sellingPrice: 40, unitType: "plate" },
+
+    // Fried rice / noodles
+    { name: "Veg Fried Rice", sku: "MENU-VEG-FRIED-RICE", purchaseCost: 0, sellingPrice: 20, unitType: "plate" },
+    { name: "Egg Fried Rice", sku: "MENU-EGG-FRIED-RICE", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Chicken Fried Rice", sku: "MENU-CHICKEN-FRIED-RICE", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Mixed Fried Rice", sku: "MENU-MIXED-FRIED-RICE", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+    { name: "Veg Noodles", sku: "MENU-VEG-NOODLES", purchaseCost: 0, sellingPrice: 20, unitType: "plate" },
+    { name: "Egg Noodles", sku: "MENU-EGG-NOODLES", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Chicken Noodles", sku: "MENU-CHICKEN-NOODLES", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Mixed Noodles", sku: "MENU-MIXED-NOODLES", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+
+    // Seafood starters
+    { name: "Apollo Fish", sku: "MENU-APOLLO-FISH", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Chilli Fish", sku: "MENU-CHILLI-FISH", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "King Fish", sku: "MENU-KING-FISH", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Tawa Fish Fry", sku: "MENU-TAWA-FISH-FRY", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Loose Prawns", sku: "MENU-LOOSE-PRAWNS", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Chilli Prawns", sku: "MENU-CHILLI-PRAWNS", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Ghee Roast Prawns Fry", sku: "MENU-GHEE-ROAST-PRAWNS-FRY", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+
+    // Breads
+    { name: "Chapati", sku: "MENU-CHAPATI", purchaseCost: 0, sellingPrice: 3, unitType: "pcs" },
+    { name: "Pulka", sku: "MENU-PULKA", purchaseCost: 0, sellingPrice: 3, unitType: "pcs" },
+    { name: "Parotta", sku: "MENU-PAROTTA", purchaseCost: 0, sellingPrice: 5, unitType: "pcs" },
+    { name: "Roti", sku: "MENU-ROTI", purchaseCost: 0, sellingPrice: 5, unitType: "pcs" },
+    { name: "Dosa Set", sku: "MENU-DOSA-SET", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+
+    // Fresh fruit juices
+    { name: "Orange Juice", sku: "MENU-ORANGE-JUICE", purchaseCost: 0, sellingPrice: 20, unitType: "glass" },
+    { name: "Lemon Juice", sku: "MENU-LEMON-JUICE", purchaseCost: 0, sellingPrice: 20, unitType: "glass" },
+    { name: "Watermelon Juice", sku: "MENU-WATERMELON-JUICE", purchaseCost: 0, sellingPrice: 20, unitType: "glass" },
+    { name: "Grapes Juice", sku: "MENU-GRAPES-JUICE", purchaseCost: 0, sellingPrice: 20, unitType: "glass" },
+    { name: "Pineapple Juice", sku: "MENU-PINEAPPLE-JUICE", purchaseCost: 0, sellingPrice: 20, unitType: "glass" },
+    { name: "Lassi", sku: "MENU-LASSI", purchaseCost: 0, sellingPrice: 15, unitType: "glass" },
+    { name: "Mango Juice", sku: "MENU-MANGO-JUICE", purchaseCost: 0, sellingPrice: 25, unitType: "glass" },
+    { name: "Avocado Juice", sku: "MENU-AVOCADO-JUICE", purchaseCost: 0, sellingPrice: 25, unitType: "glass" },
+
+    // Veg starters
+    { name: "French Fries", sku: "MENU-FRENCH-FRIES", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Peanut Masala", sku: "MENU-PEANUT-MASALA", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Crispy Corn", sku: "MENU-CRISPY-CORN", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Mix Pakodi", sku: "MENU-MIX-PAKODI", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Gobi 65", sku: "MENU-GOBI-65", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Gobi Manchurian", sku: "MENU-GOBI-MANCHURIAN", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Chilli Gobi", sku: "MENU-CHILLI-GOBI", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Chilli Paneer", sku: "MENU-CHILLI-PANEER", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Pepper Paneer Fry", sku: "MENU-PEPPER-PANEER-FRY", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Chilli Mushroom", sku: "MENU-CHILLI-MUSHROOM", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Mushroom Pepper Fry", sku: "MENU-MUSHROOM-PEPPER-FRY", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+
+    // Veg main course
+    { name: "Dal Tadka", sku: "MENU-DAL-TADKA", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Kaju Tomato", sku: "MENU-KAJU-TOMATO", purchaseCost: 0, sellingPrice: 20, unitType: "plate" },
+    { name: "Paneer Butter Masala", sku: "MENU-PANEER-BUTTER-MASALA", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Kadai Paneer", sku: "MENU-KADAI-PANEER", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Palak Paneer", sku: "MENU-PALAK-PANEER", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Mushroom Masala", sku: "MENU-MUSHROOM-MASALA", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+
+    // Fruit platter
+    { name: "Fruit Platter Half", sku: "MENU-FRUIT-PLATTER-HALF", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Fruit Platter Full", sku: "MENU-FRUIT-PLATTER-FULL", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+
+    // Non veg starters
+    { name: "Chicken 65", sku: "MENU-CHICKEN-65", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Guntur Chicken Fry (Spicy)", sku: "MENU-GUNTUR-CHICKEN-FRY-SPICY", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Kaju Chicken", sku: "MENU-KAJU-CHICKEN", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Chilli Chicken", sku: "MENU-CHILLI-CHICKEN", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Chicken Lollipop", sku: "MENU-CHICKEN-LOLLIPOP", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Kaju Mutton Fry", sku: "MENU-KAJU-MUTTON-FRY", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+    { name: "Pepper Mutton Fry", sku: "MENU-PEPPER-MUTTON-FRY", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+    { name: "Hyderabadi Style Kadak Mutton Fry", sku: "MENU-HYDERABADI-STYLE-KADAK-MUTTON-FRY", purchaseCost: 0, sellingPrice: 40, unitType: "plate" },
+    { name: "Double Egg Omelette", sku: "MENU-DOUBLE-EGG-OMELETTE", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Chilli Egg", sku: "MENU-CHILLI-EGG", purchaseCost: 0, sellingPrice: 20, unitType: "plate" },
+    { name: "Egg Bhurji", sku: "MENU-EGG-BHURJI", purchaseCost: 0, sellingPrice: 15, unitType: "plate" },
+    { name: "Beef Roast", sku: "MENU-BEEF-ROAST", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Chilli Beef", sku: "MENU-CHILLI-BEEF", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Beef Coconut", sku: "MENU-BEEF-COCONUT", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+
+    // Non veg main course
+    { name: "Egg Masala", sku: "MENU-EGG-MASALA", purchaseCost: 0, sellingPrice: 20, unitType: "plate" },
+    { name: "Chicken Curry", sku: "MENU-CHICKEN-CURRY", purchaseCost: 0, sellingPrice: 25, unitType: "plate" },
+    { name: "Butter Chicken Masala", sku: "MENU-BUTTER-CHICKEN-MASALA", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Natu Kodi Curry (Desi Chicken)", sku: "MENU-NATU-KODI-CURRY-DESI-CHICKEN", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+    { name: "Telangana Chicken Curry (Spicy)", sku: "MENU-TELANGANA-CHICKEN-CURRY-SPICY", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
+    { name: "Mutton Curry", sku: "MENU-MUTTON-CURRY", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+    { name: "Beef Masala", sku: "MENU-BEEF-MASALA", purchaseCost: 0, sellingPrice: 35, unitType: "plate" },
+    { name: "Prawns Curry", sku: "MENU-PRAWNS-CURRY", purchaseCost: 0, sellingPrice: 30, unitType: "plate" },
   ];
 
+  await prisma.item.updateMany({
+    where: { sku: { notIn: items.map((item) => item.sku) } },
+    data: { active: false },
+  });
+
+  type CategoryName = (typeof categories)[number]["name"];
+  type MenuItem = (typeof items)[number];
+
+  function categoryNameForItem(item: MenuItem): CategoryName {
+    const sku = item.sku;
+
+    if (sku.includes("LANSON") || sku.includes("SPARKLING")) return "Champagne & Sparkling Wine";
+    if (
+      sku.includes("SHIRAZ") ||
+      sku.includes("RED-WINE") ||
+      sku.includes("CHARDONNAY") ||
+      sku.includes("WHITE-WINE") ||
+      sku.includes("MATEUS")
+    ) return "Wine";
+    if (sku.includes("DRAUGHT-BEER")) return "Draught Beer";
+    if (
+      sku.includes("BUDWEISER") ||
+      sku.includes("HEINEKEN") ||
+      sku.includes("CORONA") ||
+      sku.includes("KING-FISHER")
+    ) return "Bottle Beer";
+    if (
+      sku.includes("ST-REMY") ||
+      sku.includes("HENNESSY") ||
+      sku.includes("REMY-MARTIN")
+    ) return "Brandy & Cognac";
+    if (sku.includes("ABSOLUT") || sku.includes("SMIRNOFF") || sku.includes("GREY-GOOSE")) return "Vodka";
+    if (sku.includes("BACARDI") || sku.includes("CAPTAIN-MORGAN") || sku.includes("MALIBU")) return "Rum";
+    if (sku.includes("GORDONS") || sku.includes("BOMBAY-SAPPHIRE")) return "Gin";
+    if (sku.includes("JOSE-CUERVO")) return "Tequila";
+    if (
+      sku.includes("BALLANTINES") ||
+      sku.includes("RED-LABEL") ||
+      sku.includes("JB-RARE") ||
+      sku.includes("CANADIAN-CLUB") ||
+      sku.includes("JAMESON") ||
+      sku.includes("CHIVAS-REGAL") ||
+      sku.includes("JACK-DANIELS") ||
+      sku.includes("BLACK-LABEL") ||
+      sku.includes("DOUBLE-BLACK") ||
+      sku.includes("JIM-BEAM") ||
+      sku.includes("BLUE-LABEL") ||
+      sku.includes("ROYAL-SALUTE") ||
+      sku.includes("GLENFIDDICH")
+    ) return "Whisky";
+    if (
+      sku.includes("BAILEYS") ||
+      sku.includes("COINTREAU") ||
+      sku.includes("KAHLUA") ||
+      sku.includes("PEACH-SCHNAPPS") ||
+      sku.includes("TRIPLE-SEC") ||
+      sku.includes("SAMBUCA") ||
+      sku.includes("JAGERMEISTER")
+    ) return "Liqueurs";
+    if (
+      sku.includes("LONG-ISLAND") ||
+      sku.includes("BULL-FROG") ||
+      sku.includes("SEX-ON-THE-BEACH") ||
+      sku.includes("MARGARITA") ||
+      sku.includes("PINA-COLADA") ||
+      sku.includes("COSMOPOLITAN") ||
+      sku.includes("MOJITO") ||
+      sku.includes("TEQUILA-SUNRISE") ||
+      sku.includes("JAGER-BOMB") ||
+      sku.includes("BLACK-RUSSIAN")
+    ) return "Cocktails";
+    if (
+      sku.includes("KAMIKAZE") ||
+      sku.includes("B-52") ||
+      sku.includes("BRAIN-DAMAGE") ||
+      sku.includes("FLAT-LINER")
+    ) return "Shooters";
+    if (
+      sku.includes("GHEE-RICE") ||
+      sku.includes("JEERA-RICE") ||
+      sku.includes("CURD-RICE") ||
+      sku.includes("BIRYANI")
+    ) return "Rice & Biryani";
+    if (sku.includes("FRIED-RICE") || sku.includes("NOODLES")) return "Fried Rice & Noodles";
+    if (
+      sku.includes("APOLLO-FISH") ||
+      sku.includes("CHILLI-FISH") ||
+      sku.includes("KING-FISH") ||
+      sku.includes("TAWA-FISH-FRY") ||
+      sku.includes("LOOSE-PRAWNS") ||
+      sku.includes("CHILLI-PRAWNS") ||
+      sku.includes("GHEE-ROAST-PRAWNS-FRY")
+    ) return "Seafood Starters";
+    if (
+      sku.includes("CHAPATI") ||
+      sku.includes("PULKA") ||
+      sku.includes("PAROTTA") ||
+      sku.includes("ROTI") ||
+      sku.includes("DOSA-SET")
+    ) return "Breads";
+    if (sku.includes("JUICE") || sku.includes("LASSI")) return "Fresh Juices";
+    if (
+      sku.includes("MUSHROOM-PEPPER-FRY") ||
+      sku.includes("CHILLI-MUSHROOM") ||
+      sku.includes("CHILLI-PANEER") ||
+      sku.includes("PANEER-65") ||
+      sku.includes("PANEER-PEPPER-FRY") ||
+      sku.includes("GOBI") ||
+      sku.includes("VEG-PAKODA") ||
+      sku.includes("FRENCH-FRIES") ||
+      sku.includes("PEANUT-MASALA") ||
+      sku.includes("CRISPY-CORN") ||
+      sku.includes("MIX-PAKODI") ||
+      sku.includes("PEPPER-PANEER-FRY")
+    ) return "Veg Starters";
+    if (
+      sku.includes("DAL-TADKA") ||
+      sku.includes("KAJU-TOMATO") ||
+      sku.includes("PANEER-BUTTER-MASALA") ||
+      sku.includes("KADAI-PANEER") ||
+      sku.includes("PALAK-PANEER") ||
+      sku.includes("MUSHROOM-MASALA")
+    ) return "Veg Main Course";
+    if (sku.includes("FRUIT-PLATTER")) return "Fruit Platter";
+    if (
+      sku.includes("CHICKEN-65") ||
+      sku.includes("GUNTUR-CHICKEN-FRY") ||
+      sku.includes("KAJU-CHICKEN") ||
+      sku.includes("CHILLI-CHICKEN") ||
+      sku.includes("CHICKEN-LOLLIPOP") ||
+      sku.includes("KAJU-MUTTON-FRY") ||
+      sku.includes("PEPPER-MUTTON-FRY") ||
+      sku.includes("HYDERABADI-STYLE-KADAK-MUTTON-FRY") ||
+      sku.includes("DOUBLE-EGG-OMELETTE") ||
+      sku.includes("CHILLI-EGG") ||
+      sku.includes("EGG-BHURJI") ||
+      sku.includes("BEEF-ROAST") ||
+      sku.includes("CHILLI-BEEF") ||
+      sku.includes("BEEF-COCONUT")
+    ) return "Non Veg Starters";
+    if (
+      sku.includes("EGG-MASALA") ||
+      sku.includes("CHICKEN-CURRY") ||
+      sku.includes("BUTTER-CHICKEN-MASALA") ||
+      sku.includes("NATU-KODI-CURRY") ||
+      sku.includes("TELANGANA-CHICKEN-CURRY") ||
+      sku.includes("MUTTON-CURRY") ||
+      sku.includes("BEEF-MASALA") ||
+      sku.includes("PRAWNS-CURRY")
+    ) return "Non Veg Main Course";
+
+    throw new Error(`Missing menu category for ${item.name}`);
+  }
+
   for (const item of items) {
-    const category = categoryByName.get(item.categoryName);
+    const categoryName = categoryNameForItem(item);
+    const category = categoryByName.get(categoryName);
     if (!category) {
-      throw new Error(`Missing category ${item.categoryName}`);
+      throw new Error(`Missing category ${categoryName}`);
     }
+    const commissionEligible = category.type !== "food" && category.type !== "beverage";
 
     await prisma.item.upsert({
       where: { sku: item.sku },
@@ -258,10 +692,12 @@ async function main() {
         categoryId: category.id,
         sellingPriceCents: toCents(item.sellingPrice),
         purchaseCostCents: toCents(item.purchaseCost),
-        stockQuantity: item.stockQuantity,
-        commissionEligible: item.commissionEligible ?? false,
-        specialCommissionEligible: item.specialCommissionEligible ?? false,
-        complimentaryEligible: item.complimentaryEligible ?? false,
+        stockQuantity: 0,
+        unitType: item.unitType,
+        commissionEligible,
+        specialCommissionEligible: false,
+        complimentaryEligible: false,
+        active: true,
       },
       create: {
         name: item.name,
@@ -269,20 +705,33 @@ async function main() {
         categoryId: category.id,
         sellingPriceCents: toCents(item.sellingPrice),
         purchaseCostCents: toCents(item.purchaseCost),
-        stockQuantity: item.stockQuantity,
-        commissionEligible: item.commissionEligible ?? false,
-        specialCommissionEligible: item.specialCommissionEligible ?? false,
-        complimentaryEligible: item.complimentaryEligible ?? false,
+        stockQuantity: 0,
+        unitType: item.unitType,
+        commissionEligible,
+        specialCommissionEligible: false,
+        complimentaryEligible: false,
+        active: true,
       },
     });
   }
+
+  await prisma.item.updateMany({
+    where: {
+      category: {
+        name: {
+          in: ["Seafood Starters", "Veg Starters", "Non Veg Starters"],
+        },
+      },
+    },
+    data: { complimentaryEligible: true },
+  });
 
   const staffConfigs = [
     {
       name: "Priya",
       role: "WAITRESS" as const,
       phone: "9000000001",
-      fixedSalary: 20000,
+      fixedSalary: 2000,
       normalCommissionPercent: 25,
       specialCommissionPercent: 50,
     },
@@ -298,9 +747,9 @@ async function main() {
       name: "Rahul",
       role: "WAITER" as const,
       phone: "9000000003",
-      fixedSalary: 18000,
+      fixedSalary: 1800,
       normalCommissionPercent: 10,
-      specialCommissionPercent: 25,
+      specialCommissionPercent: 50,
     },
   ];
 
@@ -338,77 +787,36 @@ async function main() {
       name: "BarPOS Admin",
       roleId: adminRole.id,
       active: true,
+      passwordHash: await hash("admin123", 12),
     },
     create: {
       name: "BarPOS Admin",
       email: "admin@barpos.local",
-      passwordHash: await hash("Admin@12345", 12),
+      passwordHash: await hash("admin123", 12),
       roleId: adminRole.id,
     },
   });
 
-  const starterItems = await prisma.item.findMany({
-    where: { category: { name: "Starters" } },
+  const cashierRole = await prisma.role.findUniqueOrThrow({
+    where: { name: "CASHIER" },
+  });
+  await prisma.user.upsert({
+    where: { email: "billman@barpos.local" },
+    update: {
+      name: "Demo Billman",
+      roleId: cashierRole.id,
+      active: true,
+      passwordHash: await hash("billman123", 12),
+    },
+    create: {
+      name: "Demo Billman",
+      email: "billman@barpos.local",
+      passwordHash: await hash("billman123", 12),
+      roleId: cashierRole.id,
+    },
   });
 
-  const offerConfigs = [
-    {
-      name: "Beer Bucket = 1 Free Starter",
-      buyCategoryName: "Beer",
-      buyQuantity: 1,
-      freeQuantity: 1,
-    },
-    {
-      name: "Half Bottle = 1 Free Starter",
-      buyCategoryName: "Half Bottle",
-      buyQuantity: 1,
-      freeQuantity: 1,
-    },
-    {
-      name: "Full Bottle = 2 Free Starters",
-      buyCategoryName: "Full Bottle",
-      buyQuantity: 1,
-      freeQuantity: 2,
-    },
-  ];
-
-  for (const offerConfig of offerConfigs) {
-    const buyCategory = categoryByName.get(offerConfig.buyCategoryName);
-    const freeCategory = categoryByName.get("Starters");
-    if (!buyCategory || !freeCategory) {
-      throw new Error(`Missing offer category for ${offerConfig.name}`);
-    }
-
-    const existingOffer = await prisma.offer.findFirst({
-      where: { name: offerConfig.name },
-    });
-    const offerData = {
-      buyCategoryId: buyCategory.id,
-      buyQuantity: offerConfig.buyQuantity,
-      freeCategoryId: freeCategory.id,
-      freeQuantity: offerConfig.freeQuantity,
-      active: true,
-      managerApprovalRequired: false,
-      waiterCanChooseFreeItem: true,
-    };
-
-    const offer = existingOffer
-      ? await prisma.offer.update({
-          where: { id: existingOffer.id },
-          data: offerData,
-        })
-      : await prisma.offer.create({
-          data: { name: offerConfig.name, ...offerData },
-        });
-
-    await prisma.offerEligibleItem.deleteMany({ where: { offerId: offer.id } });
-    await prisma.offerEligibleItem.createMany({
-      data: starterItems.map((item) => ({
-        offerId: offer.id,
-        itemId: item.id,
-      })),
-    });
-  }
+  await prisma.offer.updateMany({ data: { active: false } });
 
   const expenseCategories = [
     "Staff food",
@@ -430,14 +838,38 @@ async function main() {
     });
   }
 
+  const paymentMethods = [
+    { name: "Cash Counter", code: "CASH_COUNTER", mode: "CASH" as const, sortOrder: 1 },
+    { name: "Card Machine 1", code: "CARD_MACHINE_1", mode: "CARD" as const, sortOrder: 2 },
+    { name: "Card Machine 2", code: "CARD_MACHINE_2", mode: "CARD" as const, sortOrder: 3 },
+    { name: "Card Machine 3", code: "CARD_MACHINE_3", mode: "CARD" as const, sortOrder: 4 },
+    { name: "UPI India", code: "UPI_INDIA", mode: "UPI" as const, sortOrder: 5 },
+    { name: "Online Transfer", code: "ONLINE_TRANSFER", mode: "ONLINE" as const, sortOrder: 6 },
+  ];
+  for (const method of paymentMethods) {
+    await prisma.paymentMethod.upsert({
+      where: { code: method.code },
+      update: {
+        name: method.name,
+        mode: method.mode,
+        active: true,
+        sortOrder: method.sortOrder,
+      },
+      create: {
+        ...method,
+        active: true,
+      },
+    });
+  }
+
   const invoiceSetting = await prisma.invoiceSetting.findFirst();
   if (!invoiceSetting) {
     await prisma.invoiceSetting.create({
       data: {
         restaurantName: "BarPOS Restaurant & Lounge",
-        address: "Main Road, City",
-        phone: "+91 90000 00000",
-        gstNumber: "GSTIN-DEMO",
+        address: "Dubai, UAE",
+        phone: "+971 50 000 0000",
+        gstNumber: "TRN-DEMO",
         thankYouMessage: "Thank you. Visit again!",
       },
     });
@@ -455,12 +887,12 @@ async function main() {
   }
 
   const taxSetting = await prisma.taxSetting.findFirst({
-    where: { name: "GST" },
+    where: { name: "VAT" },
   });
   if (!taxSetting) {
     await prisma.taxSetting.create({
       data: {
-        name: "GST",
+        name: "VAT",
         percent: 0,
         active: true,
       },

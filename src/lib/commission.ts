@@ -4,7 +4,6 @@ export type CommissionInput = {
   eligibleSalesCents: number;
   specialDrinkSalesCents: number;
   normalCommissionPercent: number;
-  specialCommissionPercent: number;
 };
 
 export type CommissionResult = {
@@ -16,6 +15,7 @@ export type CommissionResult = {
 };
 
 export function calculateCommission(input: CommissionInput): CommissionResult {
+  const fixedSpecialCommissionPercent = 50;
   const specialDrinkSalesCents = Math.min(
     input.specialDrinkSalesCents,
     input.eligibleSalesCents,
@@ -30,7 +30,7 @@ export function calculateCommission(input: CommissionInput): CommissionResult {
   );
   const specialCommissionCents = percentOf(
     specialDrinkSalesCents,
-    input.specialCommissionPercent,
+    fixedSpecialCommissionPercent,
   );
 
   return {

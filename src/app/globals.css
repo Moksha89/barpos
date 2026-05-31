@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f5f4;
-  --foreground: #1c1917;
+  --background: #f7f7f5;
+  --foreground: #111111;
+  --color-bg: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-sidebar: #0b0b0b;
+  --color-header: #ffffff;
+  --color-text: #111111;
+  --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-gold: #f5b800;
+  --color-gold-dark: #b88a00;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-warning: #f59e0b;
 }
 
 @theme inline {
@@ -16,6 +28,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
 }
 
 button,
@@ -26,12 +39,134 @@ textarea {
   touch-action: manipulation;
 }
 
+input,
+select,
+textarea {
+  color: var(--color-text);
+}
+
+::selection {
+  background: rgba(245, 184, 0, 0.35);
+}
+
+.app-page {
+  margin-inline: auto;
+  display: grid;
+  width: 100%;
+  max-width: 1440px;
+  gap: 1rem;
+  padding: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .app-page {
+    padding: 1rem;
+  }
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.premium-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fafaf9;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.premium-table th,
+.premium-table td {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.625rem 0.75rem;
+  vertical-align: middle;
+}
+
+.premium-table tbody tr:hover {
+  background: #fffbeb;
+}
+
+.currency-cell {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-card-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .mobile-card-list {
+    display: none;
+  }
+}
+
+.desktop-table-only {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktop-table-only {
+    display: block;
+  }
+}
+
+.report-tab-panel {
+  display: none;
+  scroll-margin-top: 1rem;
+}
+
+.report-tab-panel:target,
+.report-tabs:not(:has(.report-tab-panel:target)) #total-sales {
+  display: grid;
+}
+
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
   .no-print {
     display: none !important;
   }
 
+  header,
+  aside {
+    display: none !important;
+  }
+
+  html,
   body {
     background: white;
+    margin: 0;
+    padding: 0;
+    width: 80mm;
+  }
+
+  .receipt-print-page {
+    margin: 0 !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    width: 80mm !important;
+  }
+
+  .receipt-paper {
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 3mm !important;
+    width: 80mm !important;
   }
 }
